@@ -1,0 +1,24 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+appsettings.Development.json
+
+# Node / Vue
+node_modules/
+dist/
+.vite/
+npm-debug.log*
+
+# Секреты и окружение
+.env
+.env.*
+!.env.example
+
+# IDE / ОС
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
