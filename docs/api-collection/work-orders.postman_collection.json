@@ -1,0 +1,689 @@
+{
+  "info": {
+    "name": "ТОиР-Цех — заявки на ремонт (ЛР8)",
+    "description": "Импортировать в Postman или Insomnia. Сервер: cd backend && dotnet run → http://localhost:5000. Запускать по порядку (Run collection): запрос 02 сохраняет id созданной заявки в переменную workOrderId. Текущий пользователь до ЛР11 — заголовок X-User-Id: 1 мастер, 2 механик, 5 и 6 слесари. Данные в памяти: после перезапуска сервера список пуст.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000"
+    },
+    {
+      "key": "workOrderId",
+      "value": "1"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 GET список — 200",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/work-orders",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "work-orders"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.test('Ответ — массив (пустой список тоже 200 и [])', () => pm.expect(pm.response.json()).to.be.an('array'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 POST создать — 201 (мастер X-User-Id: 1)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-User-Id",
+            "value": "1"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/work-orders",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "work-orders"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Не включается шпиндель\",\n  \"equipmentId\": 3,\n  \"description\": \"После смены инструмента шпиндель не стартует, на пульте ошибка E-12. Станок остановлен.\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 201', () => pm.response.to.have.status(201));",
+              "const b = pm.response.json();",
+              "pm.test('Есть id, number, status New, исполнителя нет', () => {",
+              "  pm.expect(b.id).to.be.a('number');",
+              "  pm.expect(b.number).to.match(/^ЗР-\\d{4}-\\d{4}$/);",
+              "  pm.expect(b.status).to.eql('New');",
+              "  pm.expect(b.assigneeUserId).to.eql(null);",
+              "});",
+              "pm.test('Заголовок Location', () => pm.response.to.have.header('Location'));",
+              "pm.collectionVariables.set('workOrderId', b.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 POST короткий title — 400",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-User-Id",
+            "value": "1"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/work-orders",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "work-orders"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Нас\",\n  \"equipmentId\": 2,\n  \"description\": \"После грозы гудит и встаёт через минуту\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 400', () => pm.response.to.have.status(400));",
+              "pm.test('Ошибка у поля title', () => pm.expect(pm.response.json().errors).to.have.property('title'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 POST клиент пытается задать status и id — сервер игнорирует, 201 New",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-User-Id",
+            "value": "1"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/work-orders",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "work-orders"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": 999,\n  \"status\": \"Closed\",\n  \"title\": \"Течь масла из гидроцилиндра пресса\",\n  \"equipmentId\": 7,\n  \"description\": \"Под прессом лужа масла, давление падает через 10 минут.\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 201', () => pm.response.to.have.status(201));",
+              "pm.test('Статус всё равно New, id не 999', () => { const b = pm.response.json(); pm.expect(b.status).to.eql('New'); pm.expect(b.id).to.not.eql(999); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 POST оборудования нет в справочнике — 400",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-User-Id",
+            "value": "1"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/work-orders",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "work-orders"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Не работает освещение участка\",\n  \"equipmentId\": 999,\n  \"description\": \"Не горят светильники над прессами.\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 400', () => pm.response.to.have.status(400));",
+              "pm.test('Ошибка у поля equipmentId', () => pm.expect(pm.response.json().errors).to.have.property('equipmentId'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 GET одна заявка — 200",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/work-orders/{{workOrderId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "work-orders",
+            "{{workOrderId}}"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 GET несуществующий id — 404",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/work-orders/999999",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "work-orders",
+            "999999"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 404', () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 PATCH status без исполнителя — 409",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-User-Id",
+            "value": "5"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/work-orders/{{workOrderId}}/status",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "work-orders",
+            "{{workOrderId}}",
+            "status"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"InProgress\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 409', () => pm.response.to.have.status(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 PATCH assignee — 200, статус остаётся New",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/work-orders/{{workOrderId}}/assignee",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "work-orders",
+            "{{workOrderId}}",
+            "assignee"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"assigneeUserId\": 5\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.test('Исполнитель 5, статус New', () => { const b = pm.response.json(); pm.expect(b.assigneeUserId).to.eql(5); pm.expect(b.status).to.eql('New'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 PATCH status другим слесарем — 409",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-User-Id",
+            "value": "6"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/work-orders/{{workOrderId}}/status",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "work-orders",
+            "{{workOrderId}}",
+            "status"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"InProgress\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 409', () => pm.response.to.have.status(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 PATCH status InProgress назначенным слесарем — 200",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-User-Id",
+            "value": "5"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/work-orders/{{workOrderId}}/status",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "work-orders",
+            "{{workOrderId}}",
+            "status"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"InProgress\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.test('Статус InProgress', () => pm.expect(pm.response.json().status).to.eql('InProgress'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 PATCH status Closed назначенным слесарем — 200",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-User-Id",
+            "value": "5"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/work-orders/{{workOrderId}}/status",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "work-orders",
+            "{{workOrderId}}",
+            "status"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"Closed\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.test('Статус Closed', () => pm.expect(pm.response.json().status).to.eql('Closed'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 PATCH из Closed — 409",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-User-Id",
+            "value": "2"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/work-orders/{{workOrderId}}/status",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "work-orders",
+            "{{workOrderId}}",
+            "status"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"Cancelled\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 409', () => pm.response.to.have.status(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 PATCH неизвестный статус — 400",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-User-Id",
+            "value": "5"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/work-orders/{{workOrderId}}/status",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "work-orders",
+            "{{workOrderId}}",
+            "status"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"Done\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 400', () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15 POST учебный сбой — 500 без stack trace (только Development)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-User-Id",
+            "value": "1"
+          },
+          {
+            "key": "X-Simulate-Failure",
+            "value": "1"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/work-orders",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "work-orders"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Насос не запускается\",\n  \"equipmentId\": 2,\n  \"description\": \"После грозы гудит и встаёт через минуту\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "description": "В консоли dotnet run должна появиться строка: CreateWorkOrder failed; equipmentId=2; error=InvalidOperationException"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 500', () => pm.response.to.have.status(500));",
+              "pm.test('В ответе нет stack trace и путей к файлам', () => { const t = pm.response.text(); pm.expect(t).to.not.include(' at '); pm.expect(t).to.not.include('.cs'); pm.expect(t).to.not.include('Exception'); });"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -52,15 +52,34 @@ dotnet run
 |-------|---------|
 | `http://localhost:5000` | API |
 | `http://localhost:5000/swagger` | Swagger — список адресов API с кнопкой «Try it out» (только в Development) |
-| `http://localhost:5000/health` | `ok` — **только** «процесс жив и отвечает» |
+| `http://localhost:5000/health` | `ok` — **только** «процесс жив и отвечает», не проверяет создание заявок |
 | `http://localhost:5000/info` | имя приложения, среда, версия |
-| `http://localhost:5000/api/work-orders` | `GET` списка заявок — пока `[]` |
 
-Ограничения ЛР7:
+### REST заявок на ремонт (ЛР8)
+
+Путь и поля — из контракта ЛР2 ([`docs/api-contract.md`](docs/api-contract.md)): ресурс `/api/work-orders`, поля создания `title`, `equipmentId`, `description`, статусы `New`, `InProgress`, `Closed`, `Cancelled`.
+
+| Метод и путь | Успех | Отказы |
+|--------------|-------|--------|
+| `GET /api/work-orders` | `200`, массив (пустой — `[]`) | — |
+| `GET /api/work-orders/{id}` | `200` | `404` |
+| `POST /api/work-orders` | `201`, `id`, `number` `ЗР-ГГГГ-NNNN`, `status: "New"` | `400` поля, `409` создаёт не мастер/механик |
+| `PATCH /api/work-orders/{id}/assignee` | `200`, статус остаётся `New` | `400` не слесарь, `404`, `409` заявка не в `New` |
+| `PATCH /api/work-orders/{id}/status` | `200` | `400` неизвестный код, `404`, `409` запрещённый переход |
+
+`DELETE` нет: отмена — статус `Cancelled`. Ошибки приходят в формате `ProblemDetails`, у `400` — `errors` по полям.
+
+**Кто выполняет действие** (до входа в ЛР11) — заголовок `X-User-Id`, обязателен для `POST` и `PATCH …/status`. Учебные пользователи (`backend/Data/ReferenceData.cs`): `1` и `4` — мастера участка, `2` — механик цеха, `3` — начальник цеха, `5` и `6` — слесари-ремонтники. Оборудование — `equipmentId` от 1 до 12.
+
+**Коллекция запросов:** [`docs/api-collection/work-orders.postman_collection.json`](docs/api-collection/work-orders.postman_collection.json). В Postman: *Import* → выбрать файл → переменная `baseUrl` = `http://localhost:5000` → *Run collection* (по порядку: запрос 02 запоминает `id` созданной заявки). В коллекции проверки 201, 400, 404, 409 и учебного 500. Быстрые запросы для VS Code / Rider — `backend/backend.http`.
+
+**Учебный сбой** (только Development): заголовок `X-Simulate-Failure: 1` на `POST /api/work-orders` → клиенту `500` без stack trace, в консоли `dotnet run` строка `CreateWorkOrder failed; equipmentId=…; error=InvalidOperationException`.
+
+Ограничения:
 
 - **данные заявок пока в памяти, после перезапуска сервера пропадут**; хранение в PostgreSQL — ЛР10;
-- **`/health` проверяет только живость процесса, а не создание заявки**: он не принимает `title`, `equipmentId`, `description`, и его `200` не доказывает, что заявки создаются;
-- настоящее создание заявки (`POST /api/work-orders` с проверкой полей) появится в **ЛР8**;
+- **`/health` проверяет только живость процесса**: он не принимает полей заявки, и его `200` не доказывает, что заявки создаются;
+- входа и ролей через токен ещё нет (ЛР11): пользователь берётся из `X-User-Id`, чужие действия возвращают `409`;
 - клиент Vue к серверу пока не подключён (он работает с mock, см. выше).
 
 ## Документы
@@ -77,6 +96,8 @@ dotnet run
 - [Отчёт ЛР5](docs/reports/lab-05.md)
 - [Отчёт ЛР6](docs/reports/lab-06.md)
 - [Отчёт ЛР7](docs/reports/lab-07.md)
+- [Коллекция запросов API (ЛР8)](docs/api-collection/work-orders.postman_collection.json)
+- [Отчёт ЛР8](docs/reports/lab-08.md)
 
 ## Лабораторные работы
 
@@ -89,3 +110,4 @@ dotnet run
 | 5 | Vue: форма и список в памяти | сдано на проверку |
 | 6 | Vue: клиент API и mock | сдано на проверку |
 | 7 | ASP.NET Core: каркас Web API | сдано на проверку |
+| 8 | REST: создание, чтение, назначение и статус | сдано на проверку |
