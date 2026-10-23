@@ -17,7 +17,7 @@ const statusLabels = {
 <template>
   <table>
     <caption>
-      Список хранится в памяти браузера: после F5 новые заявки пропадут (сервера и БД пока нет)
+      Новые заявки — сверху. Данные получены из API (GET /api/work-orders)
     </caption>
     <thead>
       <tr>
@@ -39,9 +39,6 @@ const statusLabels = {
             {{ statusLabels[item.status] }}
           </span>
         </td>
-      </tr>
-      <tr v-if="items.length === 0">
-        <td colspan="5" class="empty">Заявок пока нет</td>
       </tr>
     </tbody>
   </table>
@@ -77,11 +74,6 @@ th {
 
 .nowrap {
   white-space: nowrap;
-}
-
-.empty {
-  color: var(--muted);
-  text-align: center;
 }
 
 .status {

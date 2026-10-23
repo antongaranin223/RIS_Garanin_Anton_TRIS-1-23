@@ -19,6 +19,7 @@
 
 ```bash
 cd frontend
+copy .env.example .env      # Windows; в Linux/macOS: cp .env.example .env
 npm install
 npm run dev
 ```
@@ -29,11 +30,11 @@ npm run dev
 
 | Адрес | Страница |
 |-------|----------|
-| `http://localhost:5173/` | список заявок на ремонт (тестовые данные) |
+| `http://localhost:5173/` | список заявок на ремонт (загрузка, пусто, данные или ошибка) |
 | `http://localhost:5173/new` | создание заявки (`title`, `equipmentId`, `description`) |
 | `http://localhost:5173/login` | вход (логин, пароль) |
 
-Форма «Создать» добавляет заявку в список в памяти браузера; после F5 новые заявки пропадают — сервера и базы пока нет. «Войти» пока ничего не проверяет. Подробнее — [`frontend/README.md`](frontend/README.md).
+Данные идут через клиент API (`frontend/src/api/workOrders.js`). Пока сервера на C# нет, включён учебный mock (`USE_MOCK = true`): он отвечает на `/api/work-orders` прямо из dev-сервера Vite с задержкой 0,5 с и настоящими кодами 200 / 201 / 400 / 500 — их видно в F12 → Network. Учебные флаги в адресе: `/?empty` — пустой список, `/?force500` и `/new?force500` — ответ 500, `/new?skipClientCheck` — отправить поля без проверки в браузере, чтобы увидеть 400 от сервера. Подробнее — [`frontend/README.md`](frontend/README.md).
 
 ## Документы
 
@@ -47,6 +48,7 @@ npm run dev
 - [Отчёт ЛР3](docs/reports/lab-03.md)
 - [Отчёт ЛР4](docs/reports/lab-04.md)
 - [Отчёт ЛР5](docs/reports/lab-05.md)
+- [Отчёт ЛР6](docs/reports/lab-06.md)
 
 ## Лабораторные работы
 
@@ -57,3 +59,4 @@ npm run dev
 | 3 | Vue: каркас и три экрана | сдано на проверку |
 | 4 | Vue: компоненты и маршруты | сдано на проверку |
 | 5 | Vue: форма и список в памяти | сдано на проверку |
+| 6 | Vue: клиент API и mock | сдано на проверку |

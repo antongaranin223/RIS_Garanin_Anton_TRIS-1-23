@@ -1,42 +1,60 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { addWorkOrder } from '../workOrdersStore.js'
+import { workOrders } from '../workOrdersStore.js'
 import { validateWorkOrder } from '../workOrderValidation.js'
+import { createWorkOrder, errorMessage } from '../api/workOrders.js'
 
 const router = useRouter()
 
-// Поля формы — тело будущего POST /api/work-orders: title, equipmentId, description.
+// Поля формы — тело POST /api/work-orders: title, equipmentId, description.
 function emptyForm() {
   return { title: '', equipmentId: null, description: '' }
 }
 const form = ref(emptyForm())
 
-// Ошибки по полям: { title?, equipmentId?, description? }
+// Ошибки по полям: { title?, equipmentId?, description? } — от клиентской проверки или из ответа 400.
 const errors = ref({})
+// Общее сообщение об отказе: разный текст для 400, 500 и «нет связи».
+const formError = ref('')
+// Пока идёт POST, кнопка заблокирована и второй submit ничего не отправит.
+const isSubmitting = ref(false)
 
-// Защита от двойной отправки: второй Enter до перехода на список ничего не добавит.
-let submitting = false
+// Учебный флаг ?skipClientCheck: не проверять поля в браузере, чтобы увидеть ответ 400 от сервера (mock).
+const skipClientCheck = new URLSearchParams(window.location.search).has('skipClientCheck')
 
-function onCreate() {
-  if (submitting) return
+async function onCreate() {
+  if (isSubmitting.value) return
 
-  const found = validateWorkOrder(form.value)
-  errors.value = found
-  if (Object.keys(found).length > 0) {
-    return // есть ошибки — в список ничего не добавляем
+  formError.value = ''
+  errors.value = skipClientCheck ? {} : validateWorkOrder(form.value)
+  if (Object.keys(errors.value).length > 0) {
+    return // клиентская проверка не прошла — запрос не отправляем
   }
 
-  submitting = true
-  addWorkOrder({
-    title: form.value.title.trim(),
-    equipmentId: form.value.equipmentId,
-    description: form.value.description.trim(),
-  })
-
-  errors.value = {}
-  form.value = emptyForm()
-  router.push('/')
+  isSubmitting.value = true
+  try {
+    const created = await createWorkOrder({
+      title: form.value.title.trim(),
+      equipmentId: form.value.equipmentId,
+      description: form.value.description.trim(),
+    })
+    // id, number и status — целиком из ответа сервера, страница их не придумывает.
+    workOrders.value.unshift(created)
+    form.value = emptyForm()
+    router.push('/')
+  } catch (error) {
+    formError.value = errorMessage(error)
+    if (error.kind === 'validation' && error.data?.errors) {
+      // Ответ 400 по контракту: { errors: { title: ['…'], … } } — показываем у полей.
+      errors.value = Object.fromEntries(
+        Object.entries(error.data.errors).map(([field, messages]) => [field, messages.join(' ')]),
+      )
+    }
+    // Поля формы не очищаем: человек исправит и отправит снова.
+  } finally {
+    isSubmitting.value = false
+  }
 }
 
 // Фокус на первое поле при открытии страницы (autofocus срабатывает только при первой загрузке).
@@ -46,7 +64,7 @@ const vFocus = { mounted: (el) => el.focus() }
 <template>
   <main>
     <h1>Новая заявка на ремонт</h1>
-    <form class="card" novalidate @submit.prevent="onCreate">
+    <form class="card" novalidate :aria-busy="isSubmitting" @submit.prevent="onCreate">
       <label for="title">Заголовок — краткая суть неисправности, 5–80 символов</label>
       <input
         id="title"
@@ -59,7 +77,7 @@ const vFocus = { mounted: (el) => el.focus() }
         :aria-invalid="Boolean(errors.title)"
         aria-describedby="title-error"
       />
-      <p id="title-error" class="field-error" role="alert">{{ errors.title }}</p>
+      <p id="title-error" class="field-error">{{ errors.title }}</p>
 
       <label for="equipmentId">Номер оборудования (equipmentId), целое число больше 0</label>
       <input
@@ -73,7 +91,7 @@ const vFocus = { mounted: (el) => el.focus() }
         :aria-invalid="Boolean(errors.equipmentId)"
         aria-describedby="equipmentId-error"
       />
-      <p id="equipmentId-error" class="field-error" role="alert">{{ errors.equipmentId }}</p>
+      <p id="equipmentId-error" class="field-error">{{ errors.equipmentId }}</p>
 
       <label for="description">Описание — симптомы и обстоятельства, 10–500 символов</label>
       <textarea
@@ -85,11 +103,15 @@ const vFocus = { mounted: (el) => el.focus() }
         :aria-invalid="Boolean(errors.description)"
         aria-describedby="description-error"
       ></textarea>
-      <p id="description-error" class="field-error" role="alert">{{ errors.description }}</p>
+      <p id="description-error" class="field-error">{{ errors.description }}</p>
+
+      <p v-if="formError" class="form-error" role="alert">{{ formError }}</p>
 
       <div class="actions">
-        <button type="submit" class="primary">Создать</button>
-        <button type="button" @click="router.push('/')">Отмена</button>
+        <button type="submit" class="primary" :disabled="isSubmitting">
+          {{ isSubmitting ? 'Создаём…' : 'Создать' }}
+        </button>
+        <button type="button" :disabled="isSubmitting" @click="router.push('/')">Отмена</button>
       </div>
     </form>
   </main>
@@ -106,5 +128,18 @@ const vFocus = { mounted: (el) => el.focus() }
 input[aria-invalid='true'],
 textarea[aria-invalid='true'] {
   border-color: var(--danger);
+}
+
+.form-error {
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  border-left: 4px solid var(--danger);
+  background: #fef2f2;
+  color: var(--danger);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 </style>
