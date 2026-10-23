@@ -1,0 +1,13 @@
+# Быстрые запросы из VS Code / Rider / Visual Studio. Сервер: dotnet run → http://localhost:5000
+@host = http://localhost:5000
+
+### Живость процесса (только «жив», не создание заявок)
+GET {{host}}/health
+
+### Сведения о приложении
+GET {{host}}/info
+Accept: application/json
+
+### Список заявок (пока пустой: данные в памяти, создание — ЛР8)
+GET {{host}}/api/work-orders
+Accept: application/json

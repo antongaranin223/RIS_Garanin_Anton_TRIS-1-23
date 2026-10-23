@@ -1,10 +1,13 @@
-# .NET
-bin/
-obj/
+# .NET — мусор сборки и пользовательские настройки IDE
+**/bin/
+**/obj/
 *.user
 *.suo
 .vs/
-appsettings.Development.json
+# appsettings.Development.json хранится в Git: в нём нет секретов.
+# Пароли и строку подключения к БД держим в dotnet user-secrets или переменных окружения (НФТ-5).
+appsettings.*.local.json
+*.pfx
 
 # Node / Vue
 node_modules/

@@ -36,6 +36,33 @@ npm run dev
 
 Данные идут через клиент API (`frontend/src/api/workOrders.js`). Пока сервера на C# нет, включён учебный mock (`USE_MOCK = true`): он отвечает на `/api/work-orders` прямо из dev-сервера Vite с задержкой 0,5 с и настоящими кодами 200 / 201 / 400 / 500 — их видно в F12 → Network. Учебные флаги в адресе: `/?empty` — пустой список, `/?force500` и `/new?force500` — ответ 500, `/new?skipClientCheck` — отправить поля без проверки в браузере, чтобы увидеть 400 от сервера. Подробнее — [`frontend/README.md`](frontend/README.md).
 
+## Запуск сервера (ASP.NET Core Web API)
+
+Нужен .NET SDK 10 (LTS): проверить командой `dotnet --version`. Если команды нет — установить SDK с https://dotnet.microsoft.com/download (не только Runtime).
+
+```bash
+cd backend
+dotnet restore
+dotnet run
+```
+
+В терминале должно появиться `Now listening on: http://localhost:5000` и `Hosting environment: Development`. Остановить — `Ctrl+C`.
+
+| Адрес | Что там |
+|-------|---------|
+| `http://localhost:5000` | API |
+| `http://localhost:5000/swagger` | Swagger — список адресов API с кнопкой «Try it out» (только в Development) |
+| `http://localhost:5000/health` | `ok` — **только** «процесс жив и отвечает» |
+| `http://localhost:5000/info` | имя приложения, среда, версия |
+| `http://localhost:5000/api/work-orders` | `GET` списка заявок — пока `[]` |
+
+Ограничения ЛР7:
+
+- **данные заявок пока в памяти, после перезапуска сервера пропадут**; хранение в PostgreSQL — ЛР10;
+- **`/health` проверяет только живость процесса, а не создание заявки**: он не принимает `title`, `equipmentId`, `description`, и его `200` не доказывает, что заявки создаются;
+- настоящее создание заявки (`POST /api/work-orders` с проверкой полей) появится в **ЛР8**;
+- клиент Vue к серверу пока не подключён (он работает с mock, см. выше).
+
 ## Документы
 
 - [Заявка на тему](docs/project-proposal.md)
@@ -49,6 +76,7 @@ npm run dev
 - [Отчёт ЛР4](docs/reports/lab-04.md)
 - [Отчёт ЛР5](docs/reports/lab-05.md)
 - [Отчёт ЛР6](docs/reports/lab-06.md)
+- [Отчёт ЛР7](docs/reports/lab-07.md)
 
 ## Лабораторные работы
 
@@ -60,3 +88,4 @@ npm run dev
 | 4 | Vue: компоненты и маршруты | сдано на проверку |
 | 5 | Vue: форма и список в памяти | сдано на проверку |
 | 6 | Vue: клиент API и mock | сдано на проверку |
+| 7 | ASP.NET Core: каркас Web API | сдано на проверку |
