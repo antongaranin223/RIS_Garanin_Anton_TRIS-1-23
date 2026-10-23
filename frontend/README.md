@@ -1,6 +1,6 @@
 # frontend — клиент «ТОиР-Цех»
 
-Vue 3 + Vite, язык JavaScript. Порт разработки — `5173` (схема в [`../docs/architecture.md`](../docs/architecture.md)).
+Vue 3 + Vite + vue-router, язык JavaScript. Порт разработки — `5173` (схема в [`../docs/architecture.md`](../docs/architecture.md)).
 
 ```bash
 npm install     # поставить зависимости (папка node_modules в Git не хранится)
@@ -9,11 +9,32 @@ npm run lint    # проверить код (ESLint + Oxlint)
 npm run build   # собрать в dist/ (в Git не хранится)
 ```
 
-| Файл | Что внутри |
-|------|------------|
-| `src/App.vue` | три экрана: список заявок, создание заявки, вход; переключение кнопками и `v-if` |
-| `src/main.js` | точка входа: подключает общие стили и монтирует `App` |
-| `src/assets/main.css` | общие стили (цвета, кнопки, фокус) |
-| `vite.config.js` | настройки Vite, порт `5173` |
+## Адреса
+
+| Адрес | Страница |
+|-------|----------|
+| `/` | `pages/WorkOrderList.vue` — список заявок |
+| `/new` | `pages/WorkOrderNew.vue` — создание заявки |
+| `/login` | `pages/LoginPage.vue` — вход |
+
+Маршрут `/new` — это экран в браузере, а не запрос к серверу. Создание заявки на сервере — будущий `POST http://localhost:5000/api/work-orders`.
+
+## Файлы
+
+```text
+src/
+├── main.js                ← createApp, app.use(router), mount
+├── App.vue                ← AppHeader + router-view
+├── router.js              ← три маршрута
+├── workOrdersStore.js     ← единственный общий массив заявок
+├── assets/main.css        ← общие стили
+├── components/
+│   ├── AppHeader.vue      ← название и меню из router-link
+│   └── WorkOrderTable.vue ← таблица, получает items через props
+└── pages/
+    ├── WorkOrderList.vue  ← берёт массив из store и передаёт в таблицу
+    ├── WorkOrderNew.vue   ← форма: title, equipmentId, description
+    └── LoginPage.vue      ← форма: login, password
+```
 
 Имена полей совпадают с контрактом API ЛР2 ([`../docs/api-contract.md`](../docs/api-contract.md)): `title`, `equipmentId`, `description`; статусы `New`, `InProgress`, `Closed`, `Cancelled`.

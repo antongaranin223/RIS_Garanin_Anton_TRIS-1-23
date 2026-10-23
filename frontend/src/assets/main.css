@@ -47,3 +47,67 @@ button.primary {
   outline: 3px solid #f59e0b;
   outline-offset: 2px;
 }
+
+/* Общая разметка страниц (WorkOrderList, WorkOrderNew, Login) */
+main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+h1 {
+  margin: 0 0 16px;
+  font-size: 1.5rem;
+}
+
+/* Формы создания и входа */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 640px;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.card.narrow {
+  max-width: 360px;
+}
+
+.card label {
+  margin-top: 10px;
+  font-weight: 600;
+}
+
+.card label:first-child {
+  margin-top: 0;
+}
+
+input,
+textarea {
+  padding: 8px 10px;
+  font: inherit;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+textarea {
+  resize: vertical;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.notice {
+  max-width: 640px;
+  padding: 10px 14px;
+  border-left: 4px solid var(--accent);
+  background: var(--surface-alt);
+}
