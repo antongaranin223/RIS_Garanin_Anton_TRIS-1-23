@@ -1,0 +1,49 @@
+/* Общие стили приложения ТОиР-Цех. Стили экранов — в <style scoped> компонентов. */
+:root {
+  --header-bg: #1f3a5f;
+  --header-text: #ffffff;
+  --bg: #f3f5f8;
+  --surface: #ffffff;
+  --surface-alt: #eef2f7;
+  --border: #d9dee6;
+  --border-strong: #9aa5b5;
+  --text: #1c2430;
+  --muted: #5b6676;
+  --accent: #2563eb;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+button {
+  padding: 8px 16px;
+  font: inherit;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+
+:focus-visible {
+  outline: 3px solid #f59e0b;
+  outline-offset: 2px;
+}
