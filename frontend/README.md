@@ -17,6 +17,8 @@ npm run build   # собрать в dist/ (в Git не хранится)
 | `/new` | `pages/WorkOrderNew.vue` — создание заявки |
 | `/login` | `pages/LoginPage.vue` — вход |
 
+Форма на `/new` добавляет заявку со статусом `New` в общий массив и возвращает на `/`. Список живёт в памяти браузера: после F5 новые заявки пропадают — сервера и БД пока нет.
+
 Маршрут `/new` — это экран в браузере, а не запрос к серверу. Создание заявки на сервере — будущий `POST http://localhost:5000/api/work-orders`.
 
 ## Файлы
@@ -26,14 +28,15 @@ src/
 ├── main.js                ← createApp, app.use(router), mount
 ├── App.vue                ← AppHeader + router-view
 ├── router.js              ← три маршрута
-├── workOrdersStore.js     ← единственный общий массив заявок
+├── workOrdersStore.js     ← единственный общий массив заявок, nextId, addWorkOrder
+├── workOrderValidation.js ← правила полей: title 5–80, equipmentId > 0, description 10–500
 ├── assets/main.css        ← общие стили
 ├── components/
 │   ├── AppHeader.vue      ← название и меню из router-link
 │   └── WorkOrderTable.vue ← таблица, получает items через props
 └── pages/
     ├── WorkOrderList.vue  ← берёт массив из store и передаёт в таблицу
-    ├── WorkOrderNew.vue   ← форма: title, equipmentId, description
+    ├── WorkOrderNew.vue   ← форма: v-model, проверка, @submit.prevent → addWorkOrder
     └── LoginPage.vue      ← форма: login, password
 ```
 
