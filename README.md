@@ -82,6 +82,33 @@ dotnet run
 - входа и ролей через токен ещё нет (ЛР11): пользователь берётся из `X-User-Id`, чужие действия возвращают `409`;
 - клиент Vue к серверу пока не подключён (он работает с mock, см. выше).
 
+## База данных (PostgreSQL, ЛР9)
+
+SQL-скрипты лежат в [`db/`](db):
+
+| Файл | Что внутри |
+|------|------------|
+| [`db/schema.sql`](db/schema.sql) | таблицы `areas`, `equipment`, `users`, `work_orders`; PK, FK, CHECK (четыре статуса), индексы. Можно запускать повторно: в начале удаляет и заново создаёт только таблицы проекта |
+| [`db/seed.sql`](db/seed.sql) | учебные данные: 3 участка, 12 единиц оборудования, 6 пользователей, 8 заявок во всех четырёх статусах |
+| [`db/queries.sql`](db/queries.sql) | фильтр + сортировка, JOIN с названиями оборудования и участка, GROUP BY по статусам, проверки CHECK и FK |
+
+Нужен PostgreSQL 16 или новее (установщик для Windows: https://www.postgresql.org/download/windows/, вместе с ним ставится pgAdmin). Учебная база — `toir_workshop`, не служебная `postgres`.
+
+**Через `psql`** (из корня репозитория; на Windows `psql` лежит в `C:\Program Files\PostgreSQL\<версия>\bin` — добавьте папку в PATH или пишите полный путь):
+
+```bash
+createdb -U postgres toir_workshop
+psql -U postgres -d toir_workshop -f db/schema.sql
+psql -U postgres -d toir_workshop -f db/seed.sql
+psql -U postgres -d toir_workshop -f db/queries.sql
+```
+
+**Через pgAdmin:** создать базу `toir_workshop` → *Query Tool* → открыть и выполнить `schema.sql`, затем `seed.sql`; запросы из `queries.sql` выполнять по одному (выделить запрос → F5).
+
+Пересоздать всё с нуля: снова выполнить `schema.sql` и `seed.sql` (или `dropdb -U postgres toir_workshop` и команды выше).
+
+Пароль — тот, что задали при установке PostgreSQL; `psql` спросит его сам. **Пароль в файлы и в Git не кладём.** Сервер ASP.NET Core к базе пока не подключён: заявки API ещё в памяти, подключение через EF Core — ЛР10.
+
 ## Документы
 
 - [Заявка на тему](docs/project-proposal.md)
@@ -98,6 +125,7 @@ dotnet run
 - [Отчёт ЛР7](docs/reports/lab-07.md)
 - [Коллекция запросов API (ЛР8)](docs/api-collection/work-orders.postman_collection.json)
 - [Отчёт ЛР8](docs/reports/lab-08.md)
+- [Отчёт ЛР9](docs/reports/lab-09.md)
 
 ## Лабораторные работы
 
@@ -111,3 +139,4 @@ dotnet run
 | 6 | Vue: клиент API и mock | сдано на проверку |
 | 7 | ASP.NET Core: каркас Web API | сдано на проверку |
 | 8 | REST: создание, чтение, назначение и статус | сдано на проверку |
+| 9 | PostgreSQL и SQL | сдано на проверку |

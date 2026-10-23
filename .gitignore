@@ -16,6 +16,10 @@ dist/
 npm-debug.log*
 
 # Секреты и окружение
+# Дампы базы могут содержать пользователей и пароли — в Git не кладём
+*.dump
+*.backup
+.pgpass
 .env
 .env.*
 !.env.example
