@@ -1,6 +1,6 @@
 namespace Backend.Models;
 
-// Заявка на ремонт / ТО — главный объект (docs/data-model.md, §2.1).
+// Заявка на ремонт / ТО — главный объект (docs/data-model.md, §2.1; таблица work_orders).
 // Имена свойств в JSON становятся camelCase: id, number, title, equipmentId…
 public class WorkOrder
 {
@@ -31,6 +31,13 @@ public class WorkOrder
     public DateTimeOffset CreatedAt { get; set; }
 
     public DateTimeOffset UpdatedAt { get; set; }
+
+    // Навигации по FK. В JSON не уходят: ответ собирает WorkOrderResponse.
+    public Equipment? Equipment { get; set; }
+
+    public AppUser? CreatedBy { get; set; }
+
+    public AppUser? Assignee { get; set; }
 }
 
 // Коды статусов — только эти четыре, в API и в БД (docs/api-contract.md).
@@ -40,4 +47,6 @@ public static class WorkOrderStatuses
     public const string InProgress = "InProgress";
     public const string Closed = "Closed";
     public const string Cancelled = "Cancelled";
+
+    public static readonly string[] All = [New, InProgress, Closed, Cancelled];
 }

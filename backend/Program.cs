@@ -1,8 +1,10 @@
+using Backend.Data;
 using Backend.Infrastructure;
 using Backend.Services;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,10 +28,24 @@ builder.Services.AddProblemDetails();
 // Описание API для Swagger: /openapi/v1.json
 builder.Services.AddOpenApi();
 
-// DI: контроллер получает IWorkOrderService через конструктор и не создаёт реализацию через new.
-// Singleton — один экземпляр на всё приложение: все запросы видят один список в памяти.
-// В ЛР10 здесь подставим реализацию с PostgreSQL, контроллер не изменится.
-builder.Services.AddSingleton<IWorkOrderService, InMemoryWorkOrderService>();
+// PostgreSQL через EF Core. Строка подключения — ключ ConnectionStrings:Default.
+// Настоящее значение с паролем лежит вне репозитория: dotnet user-secrets (Development)
+// или переменная окружения ConnectionStrings__Default. В appsettings.json — только пустой ключ.
+var connectionString = builder.Configuration.GetConnectionString("Default");
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException(
+        "Не задана строка подключения ConnectionStrings:Default. " +
+        "Выполните в папке backend: dotnet user-secrets set \"ConnectionStrings:Default\" \"Host=localhost;Port=5432;Database=toir_workshop;Username=postgres;Password=…\"");
+}
+
+// DbContext — Scoped: один на HTTP-запрос, после ответа закрывается и возвращает соединение в пул.
+builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
+
+// DI: контроллер получает IWorkOrderService через конструктор и не знает, где лежат данные.
+// В ЛР8 был InMemoryWorkOrderService (Singleton со списком в памяти), теперь — EF Core и PostgreSQL.
+// Scoped, потому что сервис использует DbContext; контроллер не изменился.
+builder.Services.AddScoped<IWorkOrderService, EfWorkOrderService>();
 
 var app = builder.Build();
 

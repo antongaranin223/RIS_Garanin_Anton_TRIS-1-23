@@ -1,6 +1,6 @@
 namespace Backend.Models;
 
-// Единица оборудования — справочник (docs/data-model.md, §2.2).
+// Единица оборудования — справочник (docs/data-model.md, §2.2; таблица equipment).
 public class Equipment
 {
     public int Id { get; init; }
@@ -9,6 +9,9 @@ public class Equipment
 
     public string Name { get; init; } = string.Empty;
 
-    // FK на участок; таблица участков появится вместе с PostgreSQL (ЛР10).
+    // FK на участок (equipment.area_id → areas.id).
     public int AreaId { get; init; }
+
+    // Навигация: EF подставляет участок, если запросить его через Include.
+    public Area? Area { get; init; }
 }

@@ -7,7 +7,7 @@
 | Студент | Гаранин Антон |
 | Группа | ТРИС-1-23 |
 | Тема | Разработка веб-платформы управления техническим обслуживанием оборудования для промышленного предприятия |
-| Организация | Механосборочный цех № 2, служба главного механика, машиностроительный завод «ТехМаш» (учебная) |
+| Организация | Механосборочный цех № 2, служба главного механика, машиностроительный завод «Уралмаш» (ПАО «Уралмашзавод», г. Екатеринбург) |
 | Главный объект | Заявка на ремонт / ТО оборудования (`/api/work-orders`) |
 | Справочник | Оборудование (`equipmentId`) |
 | Стек | Vue 3 · ASP.NET Core Web API · PostgreSQL |
@@ -40,9 +40,13 @@ npm run dev
 
 Нужен .NET SDK 10 (LTS): проверить командой `dotnet --version`. Если команды нет — установить SDK с https://dotnet.microsoft.com/download (не только Runtime).
 
+Сервер хранит заявки в PostgreSQL (ЛР10), поэтому перед первым запуском нужны база, строка подключения и миграция — подробно в разделе «База данных» ниже. Коротко:
+
 ```bash
 cd backend
 dotnet restore
+dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Port=5432;Database=toir_workshop;Username=postgres;Password=ВАШ_ПАРОЛЬ"
+dotnet ef database update
 dotnet run
 ```
 
@@ -77,12 +81,12 @@ dotnet run
 
 Ограничения:
 
-- **данные заявок пока в памяти, после перезапуска сервера пропадут**; хранение в PostgreSQL — ЛР10;
+- заявки хранятся в PostgreSQL через EF Core и **переживают перезапуск сервера** (ЛР10);
 - **`/health` проверяет только живость процесса**: он не принимает полей заявки, и его `200` не доказывает, что заявки создаются;
 - входа и ролей через токен ещё нет (ЛР11): пользователь берётся из `X-User-Id`, чужие действия возвращают `409`;
 - клиент Vue к серверу пока не подключён (он работает с mock, см. выше).
 
-## База данных (PostgreSQL, ЛР9)
+## База данных (PostgreSQL, ЛР9–ЛР10)
 
 SQL-скрипты лежат в [`db/`](db):
 
@@ -107,7 +111,43 @@ psql -U postgres -d toir_workshop -f db/queries.sql
 
 Пересоздать всё с нуля: снова выполнить `schema.sql` и `seed.sql` (или `dropdb -U postgres toir_workshop` и команды выше).
 
-Пароль — тот, что задали при установке PostgreSQL; `psql` спросит его сам. **Пароль в файлы и в Git не кладём.** Сервер ASP.NET Core к базе пока не подключён: заявки API ещё в памяти, подключение через EF Core — ЛР10.
+Пароль — тот, что задали при установке PostgreSQL; `psql` спросит его сам. **Пароль в файлы и в Git не кладём.**
+
+### Сервер и EF Core (ЛР10)
+
+API работает с базой через EF Core (`backend/Data/AppDbContext.cs`). Схему для API создают **миграции** из `backend/Migrations`, а не `schema.sql` — тот остаётся справкой ЛР9. Справочники (участки, оборудование, пользователи) вставляет сама миграция; заявки создаются через API.
+
+1. Инструмент миграций (один раз на компьютер):
+
+   ```bash
+   dotnet tool install --global dotnet-ef   # уже стоит: dotnet tool update --global dotnet-ef
+   dotnet ef --version
+   ```
+
+2. Пустая база. Если в `toir_workshop` уже есть таблицы из `schema.sql`, пересоздайте её, иначе миграция упадёт на `relation "areas" already exists`:
+
+   ```bash
+   dropdb -U postgres --if-exists toir_workshop
+   createdb -U postgres toir_workshop
+   ```
+
+3. Строка подключения — в **user-secrets**, вне репозитория (в `appsettings.json` только пустой ключ):
+
+   ```bash
+   cd backend
+   dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Port=5432;Database=toir_workshop;Username=postgres;Password=ВАШ_ПАРОЛЬ"
+   ```
+
+   Вместо user-secrets можно задать переменную окружения `ConnectionStrings__Default`.
+
+4. Применить миграции и запустить:
+
+   ```bash
+   dotnet ef database update
+   dotnet run
+   ```
+
+Сменили модель — новая миграция: `dotnet ef migrations add ИмяИзменения`, затем `dotnet ef database update`. Применённые миграции вручную не редактируем. В консоли `dotnet run` (Development) видно SQL, который строит EF.
 
 ## Документы
 
@@ -126,6 +166,7 @@ psql -U postgres -d toir_workshop -f db/queries.sql
 - [Коллекция запросов API (ЛР8)](docs/api-collection/work-orders.postman_collection.json)
 - [Отчёт ЛР8](docs/reports/lab-08.md)
 - [Отчёт ЛР9](docs/reports/lab-09.md)
+- [Отчёт ЛР10](docs/reports/lab-10.md)
 
 ## Лабораторные работы
 
@@ -140,3 +181,4 @@ psql -U postgres -d toir_workshop -f db/queries.sql
 | 7 | ASP.NET Core: каркас Web API | сдано на проверку |
 | 8 | REST: создание, чтение, назначение и статус | сдано на проверку |
 | 9 | PostgreSQL и SQL | сдано на проверку |
+| 10 | EF Core и PostgreSQL | сдано на проверку |

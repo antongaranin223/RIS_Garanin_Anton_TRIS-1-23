@@ -1,4 +1,3 @@
-using Backend.Data;
 using Backend.Models;
 
 namespace Backend.Dtos;
@@ -20,7 +19,8 @@ public record WorkOrderResponse(
 {
     public static WorkOrderResponse From(WorkOrder w)
     {
-        var assignee = w.AssigneeUserId is int id ? ReferenceData.FindUser(id) : null;
+        // Исполнитель берётся из навигации Assignee: сервис загружает её из таблицы users (Include).
+        var assignee = w.Assignee;
         return new WorkOrderResponse(
             w.Id, w.Number, w.Title, w.Description, w.Status, w.EquipmentId,
             w.CreatedByUserId, w.AssigneeUserId,
@@ -29,5 +29,5 @@ public record WorkOrderResponse(
     }
 }
 
-// ФИО исполнителя для списка — собирается из справочника пользователей, в заявке хранится только id (3НФ).
+// ФИО исполнителя для списка — из таблицы users через JOIN, в заявке хранится только id (3НФ).
 public record UserShortResponse(int Id, string FullName);

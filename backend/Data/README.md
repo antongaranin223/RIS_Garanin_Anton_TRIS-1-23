@@ -1,10 +1,9 @@
 # Data — доступ к данным
 
-`ReferenceData.cs` — учебные справочники в памяти (ЛР8): оборудование (`equipmentId` 1–12) и пользователи
-с ролями. По ним сервер проверяет `equipmentId` при создании и `assigneeUserId` при назначении.
+- `AppDbContext.cs` — контекст EF Core: таблицы `areas`, `equipment`, `users`, `work_orders` (ЛР10).
+  Имена таблиц, столбцов, индексов и ограничений заданы явно и совпадают с `db/schema.sql` (ЛР9).
+- `ReferenceData.cs` — начальные данные справочников (участки, оборудование `equipmentId` 1–12, пользователи с ролями).
+  Передаются в `HasData`, их вставляет миграция `InitialCreate`. Во время работы сервер читает справочники из БД.
 
-Заявки сейчас хранятся в памяти: `Services/InMemoryWorkOrderService.cs`.
-
-В ЛР10 здесь появится контекст Entity Framework Core для PostgreSQL
-(таблицы `work_orders`, `equipment`, `areas`, `users` — см. `docs/data-model.md`),
-а справочники станут начальными данными (seed).
+Заявки хранятся в PostgreSQL: `Services/EfWorkOrderService.cs`. Схему создают миграции из `../Migrations`
+(`dotnet ef database update`). Строка подключения — ключ `ConnectionStrings:Default` в dotnet user-secrets, не в Git.

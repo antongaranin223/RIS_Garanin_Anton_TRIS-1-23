@@ -4,6 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Идентификатор хранилища dotnet user-secrets (сам секрет лежит вне репозитория, в профиле пользователя) -->
+    <UserSecretsId>toir-workshop-backend-6f1c2a4e</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,6 +13,13 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.13" />
     <!-- Страница Swagger UI по адресу /swagger поверх /openapi/v1.json -->
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.3.1" />
+    <!-- EF Core: провайдер PostgreSQL (мост C# ↔ PostgreSQL, тянет за собой EF Core и драйвер Npgsql) -->
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <!-- Инструменты дизайна для dotnet ef migrations add / database update; в сборку приложения не попадают -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.14">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
 </Project>

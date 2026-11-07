@@ -2,11 +2,19 @@ using Backend.Models;
 
 namespace Backend.Data;
 
-// Учебные справочники в памяти: оборудование и пользователи.
-// Нужны, чтобы сервер проверял equipmentId и assigneeUserId (ФТ-3, ФТ-4).
-// В ЛР10 эти данные переедут в таблицы PostgreSQL как начальные данные (seed).
+// Начальные данные справочников (seed). С ЛР10 сервер читает их из PostgreSQL, а не из этого класса:
+// AppDbContext передаёт списки в HasData, и миграция InitialCreate вставляет их в таблицы
+// areas, equipment и users. Значения совпадают с db/seed.sql из ЛР9.
+// Заявок здесь нет: их создают через API.
 public static class ReferenceData
 {
+    public static readonly IReadOnlyList<Area> Areas = new List<Area>
+    {
+        new() { Id = 1, Name = "Токарный участок" },
+        new() { Id = 2, Name = "Фрезерный участок" },
+        new() { Id = 3, Name = "Сборочный участок" },
+    };
+
     public static readonly IReadOnlyList<Equipment> Equipment = new List<Equipment>
     {
         new() { Id = 1, InventoryNumber = "ИНВ-04501", Name = "Токарный станок 16К20", AreaId = 1 },
@@ -32,8 +40,4 @@ public static class ReferenceData
         new() { Id = 5, Login = "petrov", FullName = "Петров С. И.", Role = UserRoles.Fitter },
         new() { Id = 6, Login = "sidorov", FullName = "Сидоров В. А.", Role = UserRoles.Fitter },
     };
-
-    public static bool EquipmentExists(int id) => Equipment.Any(e => e.Id == id);
-
-    public static AppUser? FindUser(int id) => Users.FirstOrDefault(u => u.Id == id);
 }
