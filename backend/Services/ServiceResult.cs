@@ -5,8 +5,9 @@ public enum ServiceError
 {
     None,
     Validation, // поле не прошло проверку → 400
+    Forbidden,  // пользователь известен, но этой роли или не владельцу действие не разрешено → 403
     NotFound,   // нет записи с таким id → 404
-    Conflict,   // действие противоречит состоянию процесса → 409
+    Conflict,   // действие противоречит состоянию процесса (жизненный цикл) → 409
 }
 
 public record ServiceResult<T>(T? Value, ServiceError Error, string? Message, string? Field)
@@ -17,6 +18,9 @@ public record ServiceResult<T>(T? Value, ServiceError Error, string? Message, st
 
     public static ServiceResult<T> Invalid(string field, string message) =>
         new(default, ServiceError.Validation, message, field);
+
+    public static ServiceResult<T> Forbidden(string message) =>
+        new(default, ServiceError.Forbidden, message, null);
 
     public static ServiceResult<T> NotFound(string message) =>
         new(default, ServiceError.NotFound, message, null);

@@ -12,8 +12,9 @@ public class AppUser
     // Один из кодов UserRoles.
     public string Role { get; init; } = string.Empty;
 
-    // Только хеш пароля (НФТ-5). Вход появится в ЛР11, до этого столбец пустой (NULL).
-    public string? PasswordHash { get; init; }
+    // Только хэш пароля (НФТ-5), формат PasswordHasher из ASP.NET Identity. Исходный пароль нигде не хранится.
+    // set, а не init: при входе хэш может быть пересчитан, если библиотека подняла стоимость (SuccessRehashNeeded).
+    public string PasswordHash { get; set; } = string.Empty;
 }
 
 // Коды ролей (docs/lab-01-requirements.md, «Роли»).

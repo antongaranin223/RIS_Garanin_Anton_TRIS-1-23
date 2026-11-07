@@ -6,6 +6,11 @@ namespace Backend.Data;
 // AppDbContext передаёт списки в HasData, и миграция InitialCreate вставляет их в таблицы
 // areas, equipment и users. Значения совпадают с db/seed.sql из ЛР9.
 // Заявок здесь нет: их создают через API.
+//
+// Пароли (ЛР11): в seed лежат только хэши PasswordHasher<AppUser> из ASP.NET Identity
+// (PBKDF2-HMAC-SHA512, 100 000 итераций, своя случайная соль у каждой строки). Исходный учебный
+// пароль в коде не хранится — он указан в README для входа на стенде. Хэши записаны строками,
+// а не считаются при старте: соль случайная, и пересчёт каждый раз менял бы модель EF (лишняя миграция).
 public static class ReferenceData
 {
     public static readonly IReadOnlyList<Area> Areas = new List<Area>
@@ -33,11 +38,17 @@ public static class ReferenceData
 
     public static readonly IReadOnlyList<AppUser> Users = new List<AppUser>
     {
-        new() { Id = 1, Login = "ivanov", FullName = "Иванов А. П.", Role = UserRoles.Foreman },
-        new() { Id = 2, Login = "kuznetsov", FullName = "Кузнецов Д. В.", Role = UserRoles.Mechanic },
-        new() { Id = 3, Login = "orlov", FullName = "Орлов Е. Н.", Role = UserRoles.ShopChief },
-        new() { Id = 4, Login = "smirnov", FullName = "Смирнов О. Л.", Role = UserRoles.Foreman },
-        new() { Id = 5, Login = "petrov", FullName = "Петров С. И.", Role = UserRoles.Fitter },
-        new() { Id = 6, Login = "sidorov", FullName = "Сидоров В. А.", Role = UserRoles.Fitter },
+        new() { Id = 1, Login = "ivanov", FullName = "Иванов А. П.", Role = UserRoles.Foreman,
+            PasswordHash = "AQAAAAIAAYagAAAAEK9xYXLLB0yddYWkG5lGhzr5cTQzMD/fJP+wPFPF2VXtHUvz5jW9xHyyVlkeVvNo2Q==" },
+        new() { Id = 2, Login = "kuznetsov", FullName = "Кузнецов Д. В.", Role = UserRoles.Mechanic,
+            PasswordHash = "AQAAAAIAAYagAAAAEDrCEArfWCc58XiP0M1Rjed2j8lPg7QZi9W3vkLdEd7l0woJivhLf4KEd/R3qJLijg==" },
+        new() { Id = 3, Login = "orlov", FullName = "Орлов Е. Н.", Role = UserRoles.ShopChief,
+            PasswordHash = "AQAAAAIAAYagAAAAEOU97bNa4jvrTTAs0hqMbBchNumB+rDilC563iT68tf1CS+MA+NmanWO+Hq6tX8iGg==" },
+        new() { Id = 4, Login = "smirnov", FullName = "Смирнов О. Л.", Role = UserRoles.Foreman,
+            PasswordHash = "AQAAAAIAAYagAAAAEB7xdBVySztCh0BsATpxLPeUkXmHpWdF/1orjk3/jGQAzU5RT5/OD+iDStUj1xeo3w==" },
+        new() { Id = 5, Login = "petrov", FullName = "Петров С. И.", Role = UserRoles.Fitter,
+            PasswordHash = "AQAAAAIAAYagAAAAELwMJP5H923/eP/y4Hb/clavUK5dCcKiIwu919eTj5B9vmzj8uVyH45zAMMWtfcKAw==" },
+        new() { Id = 6, Login = "sidorov", FullName = "Сидоров В. А.", Role = UserRoles.Fitter,
+            PasswordHash = "AQAAAAIAAYagAAAAEMIQbS5uxYNDxQClDuL1A5G2EpZ1pMTf0yVJgrt4AEiTY2VjXSW5sIqWQY1qXcqVog==" },
     };
 }

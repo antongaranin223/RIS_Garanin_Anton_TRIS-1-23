@@ -5,6 +5,9 @@ defineProps({
   items: { type: Array, required: true },
 })
 
+// Пользовательский текст (заголовок, описание) выводим только интерполяцией {{ }}: Vue экранирует
+// < > & ", и описание с тегом script видно как текст, а не выполняется. v-html здесь запрещён.
+
 // Коды статусов — как в API и БД. Подписи — только для экрана.
 const statusLabels = {
   New: 'Новая',
@@ -22,7 +25,7 @@ const statusLabels = {
     <thead>
       <tr>
         <th scope="col">Номер</th>
-        <th scope="col">Заголовок</th>
+        <th scope="col">Заголовок и описание</th>
         <th scope="col">Оборудование (equipmentId)</th>
         <th scope="col">Исполнитель</th>
         <th scope="col">Статус</th>
@@ -31,7 +34,10 @@ const statusLabels = {
     <tbody>
       <tr v-for="item in items" :key="item.id">
         <td class="nowrap">{{ item.number }}</td>
-        <td>{{ item.title }}</td>
+        <td>
+          <span class="title">{{ item.title }}</span>
+          <p class="description">{{ item.description }}</p>
+        </td>
         <td>{{ item.equipmentId }}</td>
         <td>{{ item.assignee ? item.assignee.fullName : '—' }}</td>
         <td>
@@ -70,6 +76,18 @@ td {
 th {
   background: var(--surface-alt);
   font-weight: 600;
+}
+
+.title {
+  font-weight: 600;
+}
+
+.description {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
 }
 
 .nowrap {

@@ -62,7 +62,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(u => u.Login).HasColumnName("login").HasMaxLength(40).IsRequired();
             e.Property(u => u.FullName).HasColumnName("full_name").HasMaxLength(100).IsRequired();
             e.Property(u => u.Role).HasColumnName("role").HasMaxLength(16).IsRequired();
-            e.Property(u => u.PasswordHash).HasColumnName("password_hash").HasMaxLength(200);
+            e.Property(u => u.PasswordHash).HasColumnName("password_hash").HasMaxLength(200).IsRequired();
 
             e.HasIndex(u => u.Login).IsUnique().HasDatabaseName("users_login_key");
 

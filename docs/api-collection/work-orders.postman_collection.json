@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "ТОиР-Цех — заявки на ремонт (ЛР8)",
-    "description": "Импортировать в Postman или Insomnia. Сервер: cd backend && dotnet run → http://localhost:5000. Запускать по порядку (Run collection): запрос 02 сохраняет id созданной заявки в переменную workOrderId. Текущий пользователь до ЛР11 — заголовок X-User-Id: 1 мастер, 2 механик, 5 и 6 слесари. Данные в памяти: после перезапуска сервера список пуст.",
+    "name": "ТОиР-Цех — заявки на ремонт (ЛР8–ЛР11)",
+    "description": "Импортировать в Postman или Insomnia. Сервер: cd backend && dotnet run → http://localhost:5000. Запускать по порядку (Run collection): запросы 00 входят под учебными пользователями и сохраняют токены (tokenForeman — мастер ivanov, tokenMechanic — механик kuznetsov, tokenFitter / tokenFitter2 — слесари petrov и sidorov); запрос 02 сохраняет id созданной заявки в workOrderId. Учебный пароль — переменная password (см. README). Без токена — 401, чужая роль или чужая заявка — 403.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -10,16 +10,396 @@
       "value": "http://localhost:5000"
     },
     {
+      "key": "password",
+      "value": "Toir-2026!"
+    },
+    {
       "key": "workOrderId",
       "value": "1"
+    },
+    {
+      "key": "tokenForeman",
+      "value": ""
+    },
+    {
+      "key": "tokenMechanic",
+      "value": ""
+    },
+    {
+      "key": "tokenFitter",
+      "value": ""
+    },
+    {
+      "key": "tokenFitter2",
+      "value": ""
     }
   ],
   "item": [
     {
-      "name": "01 GET список — 200",
+      "name": "00 вход ivanov (мастер участка) — 200, токен в tokenForeman",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"login\": \"ivanov\",\n  \"password\": \"{{password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "pm.test('Есть токен и пользователь без хэша пароля', () => {",
+              "  pm.expect(b.token).to.be.a('string');",
+              "  pm.expect(b.user).to.not.have.property('passwordHash');",
+              "});",
+              "pm.collectionVariables.set('tokenForeman', b.token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "00 вход kuznetsov (механик цеха) — 200, токен в tokenMechanic",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"login\": \"kuznetsov\",\n  \"password\": \"{{password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "pm.test('Есть токен и пользователь без хэша пароля', () => {",
+              "  pm.expect(b.token).to.be.a('string');",
+              "  pm.expect(b.user).to.not.have.property('passwordHash');",
+              "});",
+              "pm.collectionVariables.set('tokenMechanic', b.token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "00 вход petrov (слесарь) — 200, токен в tokenFitter",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"login\": \"petrov\",\n  \"password\": \"{{password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "pm.test('Есть токен и пользователь без хэша пароля', () => {",
+              "  pm.expect(b.token).to.be.a('string');",
+              "  pm.expect(b.user).to.not.have.property('passwordHash');",
+              "});",
+              "pm.collectionVariables.set('tokenFitter', b.token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "00 вход sidorov (второй слесарь) — 200, токен в tokenFitter2",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"login\": \"sidorov\",\n  \"password\": \"{{password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "pm.test('Есть токен и пользователь без хэша пароля', () => {",
+              "  pm.expect(b.token).to.be.a('string');",
+              "  pm.expect(b.user).to.not.have.property('passwordHash');",
+              "});",
+              "pm.collectionVariables.set('tokenFitter2', b.token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "00 вход с неверным паролем — 401",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"login\": \"ivanov\",\n  \"password\": \"qwerty\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 401', () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "00 POST без входа — 401",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/work-orders",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "work-orders"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Без входа\",\n  \"equipmentId\": 3,\n  \"description\": \"Запрос без заголовка Authorization.\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 401', () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "00 GET список без входа — 401",
       "request": {
         "method": "GET",
         "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/work-orders",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "work-orders"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 401', () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "00 POST слесарем — 403",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenFitter}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/work-orders",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "work-orders"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Слесарь создаёт\",\n  \"equipmentId\": 3,\n  \"description\": \"Слесарь не может создавать заявки.\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 403', () => pm.response.to.have.status(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 GET список — 200",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenForeman}}"
+          }
+        ],
         "url": {
           "raw": "{{baseUrl}}/api/work-orders",
           "host": [
@@ -45,7 +425,7 @@
       ]
     },
     {
-      "name": "02 POST создать — 201 (мастер X-User-Id: 1)",
+      "name": "02 POST создать — 201 (мастер ivanov)",
       "request": {
         "method": "POST",
         "header": [
@@ -54,8 +434,8 @@
             "value": "application/json"
           },
           {
-            "key": "X-User-Id",
-            "value": "1"
+            "key": "Authorization",
+            "value": "Bearer {{tokenForeman}}"
           }
         ],
         "url": {
@@ -109,8 +489,8 @@
             "value": "application/json"
           },
           {
-            "key": "X-User-Id",
-            "value": "1"
+            "key": "Authorization",
+            "value": "Bearer {{tokenForeman}}"
           }
         ],
         "url": {
@@ -156,8 +536,8 @@
             "value": "application/json"
           },
           {
-            "key": "X-User-Id",
-            "value": "1"
+            "key": "Authorization",
+            "value": "Bearer {{tokenForeman}}"
           }
         ],
         "url": {
@@ -203,8 +583,8 @@
             "value": "application/json"
           },
           {
-            "key": "X-User-Id",
-            "value": "1"
+            "key": "Authorization",
+            "value": "Bearer {{tokenForeman}}"
           }
         ],
         "url": {
@@ -244,7 +624,12 @@
       "name": "06 GET одна заявка — 200",
       "request": {
         "method": "GET",
-        "header": [],
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenForeman}}"
+          }
+        ],
         "url": {
           "raw": "{{baseUrl}}/api/work-orders/{{workOrderId}}",
           "host": [
@@ -273,7 +658,12 @@
       "name": "07 GET несуществующий id — 404",
       "request": {
         "method": "GET",
-        "header": [],
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenForeman}}"
+          }
+        ],
         "url": {
           "raw": "{{baseUrl}}/api/work-orders/999999",
           "host": [
@@ -308,8 +698,8 @@
             "value": "application/json"
           },
           {
-            "key": "X-User-Id",
-            "value": "5"
+            "key": "Authorization",
+            "value": "Bearer {{tokenFitter}}"
           }
         ],
         "url": {
@@ -354,6 +744,10 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenMechanic}}"
           }
         ],
         "url": {
@@ -392,7 +786,7 @@
       ]
     },
     {
-      "name": "10 PATCH status другим слесарем — 409",
+      "name": "09a PATCH assignee мастером — 403",
       "request": {
         "method": "PATCH",
         "header": [
@@ -401,8 +795,56 @@
             "value": "application/json"
           },
           {
-            "key": "X-User-Id",
-            "value": "6"
+            "key": "Authorization",
+            "value": "Bearer {{tokenForeman}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/work-orders/{{workOrderId}}/assignee",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "work-orders",
+            "{{workOrderId}}",
+            "assignee"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"assigneeUserId\": 6\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 403', () => pm.response.to.have.status(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 PATCH status чужим слесарем — 403",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenFitter2}}"
           }
         ],
         "url": {
@@ -433,7 +875,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('Код 409', () => pm.response.to.have.status(409));"
+              "pm.test('Код 403', () => pm.response.to.have.status(403));"
             ]
           }
         }
@@ -449,8 +891,8 @@
             "value": "application/json"
           },
           {
-            "key": "X-User-Id",
-            "value": "5"
+            "key": "Authorization",
+            "value": "Bearer {{tokenFitter}}"
           }
         ],
         "url": {
@@ -498,8 +940,8 @@
             "value": "application/json"
           },
           {
-            "key": "X-User-Id",
-            "value": "5"
+            "key": "Authorization",
+            "value": "Bearer {{tokenFitter}}"
           }
         ],
         "url": {
@@ -547,8 +989,8 @@
             "value": "application/json"
           },
           {
-            "key": "X-User-Id",
-            "value": "2"
+            "key": "Authorization",
+            "value": "Bearer {{tokenMechanic}}"
           }
         ],
         "url": {
@@ -595,8 +1037,8 @@
             "value": "application/json"
           },
           {
-            "key": "X-User-Id",
-            "value": "5"
+            "key": "Authorization",
+            "value": "Bearer {{tokenFitter}}"
           }
         ],
         "url": {
@@ -643,8 +1085,8 @@
             "value": "application/json"
           },
           {
-            "key": "X-User-Id",
-            "value": "1"
+            "key": "Authorization",
+            "value": "Bearer {{tokenForeman}}"
           },
           {
             "key": "X-Simulate-Failure",

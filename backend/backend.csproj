@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <!-- Описание API в формате OpenAPI: /openapi/v1.json (пакет из шаблона webapi .NET 10) -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.14" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.13" />
     <!-- Страница Swagger UI по адресу /swagger поверх /openapi/v1.json -->
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.3.1" />

@@ -1,17 +1,77 @@
 # Быстрые запросы из VS Code (REST Client) / Rider / Visual Studio. Сервер: dotnet run → http://localhost:5000
 # Полная коллекция с проверками кодов: docs/api-collection/work-orders.postman_collection.json
 @host = http://localhost:5000
+# Учебный пароль всех пользователей — в README (раздел «Вход»). Токены берутся из ответов входа ниже.
+@password = Toir-2026!
+@tokenForeman = {{loginForeman.response.body.token}}
+@tokenMechanic = {{loginMechanic.response.body.token}}
+@tokenFitter = {{loginFitter.response.body.token}}
+@tokenFitter2 = {{loginFitter2.response.body.token}}
+
+### Вход мастера участка ivanov — 200 и token (сначала выполните четыре входа)
+# @name loginForeman
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "login": "ivanov", "password": "{{password}}" }
+
+### Вход механика цеха kuznetsov
+# @name loginMechanic
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "login": "kuznetsov", "password": "{{password}}" }
+
+### Вход слесаря petrov
+# @name loginFitter
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "login": "petrov", "password": "{{password}}" }
+
+### Вход второго слесаря sidorov
+# @name loginFitter2
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "login": "sidorov", "password": "{{password}}" }
+
+### Неверный пароль — 401
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "login": "ivanov", "password": "qwerty" }
+
+### Кто я — 200
+GET {{host}}/api/auth/me
+Authorization: Bearer {{tokenForeman}}
+
+### Создать без входа — 401
+POST {{host}}/api/work-orders
+Content-Type: application/json
+
+{ "title": "Без входа", "equipmentId": 3, "description": "Запрос без заголовка Authorization." }
+
+### Создать слесарем — 403
+POST {{host}}/api/work-orders
+Content-Type: application/json
+Authorization: Bearer {{tokenFitter}}
+
+{ "title": "Слесарь создаёт", "equipmentId": 3, "description": "Слесарь не может создавать заявки." }
+
+
 
 ### Живость процесса (только «жив», не создание заявок)
 GET {{host}}/health
 
 ### Список заявок — 200 (пустой — [])
 GET {{host}}/api/work-orders
+Authorization: Bearer {{tokenForeman}}
 
-### Создать заявку — 201 (мастер участка, X-User-Id: 1)
+### Создать заявку — 201 (мастер участка, Authorization: Bearer {{tokenForeman}})
 POST {{host}}/api/work-orders
 Content-Type: application/json
-X-User-Id: 1
+Authorization: Bearer {{tokenForeman}}
 
 {
   "title": "Не включается шпиндель",
@@ -22,7 +82,7 @@ X-User-Id: 1
 ### Короткий title — 400
 POST {{host}}/api/work-orders
 Content-Type: application/json
-X-User-Id: 1
+Authorization: Bearer {{tokenForeman}}
 
 {
   "title": "Нас",
@@ -32,34 +92,44 @@ X-User-Id: 1
 
 ### Одна заявка — 200
 GET {{host}}/api/work-orders/1
+Authorization: Bearer {{tokenForeman}}
 
 ### Несуществующий id — 404
 GET {{host}}/api/work-orders/999999
+Authorization: Bearer {{tokenForeman}}
 
 ### Статус без исполнителя — 409
 PATCH {{host}}/api/work-orders/1/status
 Content-Type: application/json
-X-User-Id: 5
+Authorization: Bearer {{tokenFitter}}
 
 { "status": "InProgress" }
 
-### Назначить слесаря 5 — 200, статус остаётся New
+### Назначить слесаря 5 — 200, статус остаётся New (только механик цеха)
 PATCH {{host}}/api/work-orders/1/assignee
 Content-Type: application/json
+Authorization: Bearer {{tokenMechanic}}
 
 { "assigneeUserId": 5 }
+
+### Чужой слесарь sidorov двигает заявку petrov — 403
+PATCH {{host}}/api/work-orders/1/status
+Content-Type: application/json
+Authorization: Bearer {{tokenFitter2}}
+
+{ "status": "InProgress" }
 
 ### В ремонт назначенным слесарем — 200
 PATCH {{host}}/api/work-orders/1/status
 Content-Type: application/json
-X-User-Id: 5
+Authorization: Bearer {{tokenFitter}}
 
 { "status": "InProgress" }
 
 ### Учебный сбой — 500 без stack trace (только Development); строка в консоли dotnet run
 POST {{host}}/api/work-orders
 Content-Type: application/json
-X-User-Id: 1
+Authorization: Bearer {{tokenForeman}}
 X-Simulate-Failure: 1
 
 {

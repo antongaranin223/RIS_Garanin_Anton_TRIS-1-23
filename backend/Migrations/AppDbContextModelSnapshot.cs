@@ -44,6 +44,7 @@ namespace backend.Migrations
                         .HasColumnName("login");
 
                     b.Property<string>("PasswordHash")
+                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("password_hash");
@@ -72,6 +73,7 @@ namespace backend.Migrations
                             Id = 1,
                             FullName = "Иванов А. П.",
                             Login = "ivanov",
+                            PasswordHash = "AQAAAAIAAYagAAAAEK9xYXLLB0yddYWkG5lGhzr5cTQzMD/fJP+wPFPF2VXtHUvz5jW9xHyyVlkeVvNo2Q==",
                             Role = "Foreman"
                         },
                         new
@@ -79,6 +81,7 @@ namespace backend.Migrations
                             Id = 2,
                             FullName = "Кузнецов Д. В.",
                             Login = "kuznetsov",
+                            PasswordHash = "AQAAAAIAAYagAAAAEDrCEArfWCc58XiP0M1Rjed2j8lPg7QZi9W3vkLdEd7l0woJivhLf4KEd/R3qJLijg==",
                             Role = "Mechanic"
                         },
                         new
@@ -86,6 +89,7 @@ namespace backend.Migrations
                             Id = 3,
                             FullName = "Орлов Е. Н.",
                             Login = "orlov",
+                            PasswordHash = "AQAAAAIAAYagAAAAEOU97bNa4jvrTTAs0hqMbBchNumB+rDilC563iT68tf1CS+MA+NmanWO+Hq6tX8iGg==",
                             Role = "ShopChief"
                         },
                         new
@@ -93,6 +97,7 @@ namespace backend.Migrations
                             Id = 4,
                             FullName = "Смирнов О. Л.",
                             Login = "smirnov",
+                            PasswordHash = "AQAAAAIAAYagAAAAEB7xdBVySztCh0BsATpxLPeUkXmHpWdF/1orjk3/jGQAzU5RT5/OD+iDStUj1xeo3w==",
                             Role = "Foreman"
                         },
                         new
@@ -100,6 +105,7 @@ namespace backend.Migrations
                             Id = 5,
                             FullName = "Петров С. И.",
                             Login = "petrov",
+                            PasswordHash = "AQAAAAIAAYagAAAAELwMJP5H923/eP/y4Hb/clavUK5dCcKiIwu919eTj5B9vmzj8uVyH45zAMMWtfcKAw==",
                             Role = "Fitter"
                         },
                         new
@@ -107,6 +113,7 @@ namespace backend.Migrations
                             Id = 6,
                             FullName = "Сидоров В. А.",
                             Login = "sidorov",
+                            PasswordHash = "AQAAAAIAAYagAAAAEMIQbS5uxYNDxQClDuL1A5G2EpZ1pMTf0yVJgrt4AEiTY2VjXSW5sIqWQY1qXcqVog==",
                             Role = "Fitter"
                         });
                 });

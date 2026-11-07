@@ -8,7 +8,9 @@ namespace Backend.Services;
 
 // Заявки хранятся в PostgreSQL (таблица work_orders) через EF Core.
 // Остановили API, запустили снова — заявки на месте: источник данных — база, а не List<> в памяти процесса.
-// Правила процесса те же, что в ЛР8; контроллер не изменился (DI, IWorkOrderService).
+// Права (ЛР11): кто выполняет действие, сервис узнаёт из currentUserId — это id из проверенного JWT.
+// Отказ по роли или «чужая заявка» → Forbidden (403); нарушение жизненного цикла → Conflict (409).
+// Именно здесь проверяется чужой id: «исполнитель этой строки == текущий пользователь».
 public class EfWorkOrderService(AppDbContext db, ILogger<EfWorkOrderService> logger) : IWorkOrderService
 {
     // Имя UNIQUE-индекса на work_orders.number (AppDbContext, schema.sql).
@@ -49,7 +51,8 @@ public class EfWorkOrderService(AppDbContext db, ILogger<EfWorkOrderService> log
         var author = db.Users.AsNoTracking().FirstOrDefault(u => u.Id == currentUserId);
         if (author is null || (author.Role != UserRoles.Foreman && author.Role != UserRoles.Mechanic))
         {
-            return ServiceResult<WorkOrder>.Conflict("Создавать заявки может только мастер участка или механик цеха");
+            // Вторая линия защиты: [Authorize(Roles = …)] на контроллере уже отсекает другие роли.
+            return ServiceResult<WorkOrder>.Forbidden("Создавать заявки может только мастер участка или механик цеха");
         }
 
         if (simulateFailure)
@@ -91,8 +94,15 @@ public class EfWorkOrderService(AppDbContext db, ILogger<EfWorkOrderService> log
         return ServiceResult<WorkOrder>.Ok(workOrder);
     }
 
-    public ServiceResult<WorkOrder> Assign(int id, int assigneeUserId)
+    public ServiceResult<WorkOrder> Assign(int id, int assigneeUserId, int currentUserId)
     {
+        // ФТ-9: назначает только механик цеха. Вторая линия защиты после [Authorize(Roles = "Mechanic")].
+        var current = db.Users.AsNoTracking().FirstOrDefault(u => u.Id == currentUserId);
+        if (current?.Role != UserRoles.Mechanic)
+        {
+            return ServiceResult<WorkOrder>.Forbidden("Назначать исполнителя может только механик цеха");
+        }
+
         var assignee = db.Users.FirstOrDefault(u => u.Id == assigneeUserId);
         if (assignee is null || assignee.Role != UserRoles.Fitter)
         {
@@ -130,16 +140,58 @@ public class EfWorkOrderService(AppDbContext db, ILogger<EfWorkOrderService> log
         }
 
         var user = db.Users.AsNoTracking().FirstOrDefault(u => u.Id == currentUserId);
-        var conflict = CheckTransition(workOrder, newStatus, currentUserId, user);
-        if (conflict is not null)
+        if (user is null)
         {
-            return ServiceResult<WorkOrder>.Conflict(conflict);
+            return ServiceResult<WorkOrder>.Forbidden(NoRights);
+        }
+
+        var refusal = CheckTransition(workOrder, newStatus, user);
+        if (refusal is not null)
+        {
+            return refusal;
         }
 
         workOrder.Status = newStatus;
         workOrder.UpdatedAt = DateTimeOffset.UtcNow;
         db.SaveChanges(); // UPDATE work_orders SET status = …, updated_at = … WHERE id = …
         return ServiceResult<WorkOrder>.Ok(workOrder);
+    }
+
+    // Текст отказа из ФТ-8 — его же клиент показывает человеку.
+    private const string NoRights = "Нет прав на изменение этой заявки";
+
+    // Таблица переходов статусов (docs/data-model.md, §6) и права на каждый переход (docs/role-matrix.md).
+    // Возвращает отказ (403 или 409) или null, если переход разрешён.
+    // Порядок проверок: сначала «бывает ли такой переход вообще» (409), потом «можно ли тебе» (403).
+    private static ServiceResult<WorkOrder>? CheckTransition(WorkOrder w, string to, AppUser user)
+    {
+        switch (w.Status, to)
+        {
+            case (WorkOrderStatuses.New, WorkOrderStatuses.InProgress):
+            case (WorkOrderStatuses.InProgress, WorkOrderStatuses.Closed):
+                // В ремонт и «выполнена» двигает только слесарь-ремонтник…
+                if (user.Role != UserRoles.Fitter)
+                    return ServiceResult<WorkOrder>.Forbidden($"{NoRights}: статус ремонта меняет только назначенный слесарь");
+                // …и только когда исполнитель вообще назначен (правило процесса, не права) …
+                if (w.AssigneeUserId is null)
+                    return ServiceResult<WorkOrder>.Conflict("Нельзя перевести в ремонт: исполнитель не назначен");
+                // …и только свою заявку: чужой id в адресе не помогает (ФТ-8).
+                if (w.AssigneeUserId != user.Id)
+                    return ServiceResult<WorkOrder>.Forbidden($"{NoRights}: она назначена другому слесарю");
+                return null;
+
+            case (WorkOrderStatuses.New, WorkOrderStatuses.Cancelled):
+                // ФТ-7: отменяет механик цеха или мастер — автор этой заявки.
+                if (user.Role == UserRoles.Mechanic)
+                    return null;
+                if (user.Role == UserRoles.Foreman && w.CreatedByUserId == user.Id)
+                    return null;
+                return ServiceResult<WorkOrder>.Forbidden($"{NoRights}: отменить может механик цеха или мастер — автор заявки");
+
+            default:
+                // ФТ-10: «Новая» → «Выполнена», любые изменения из «Выполнена» и «Отменена».
+                return ServiceResult<WorkOrder>.Conflict($"Недопустимый переход статуса: {w.Status} → {to}");
+        }
     }
 
     // Следующий номер ЗР-ГГГГ-NNNN за текущий год.
@@ -161,36 +213,4 @@ public class EfWorkOrderService(AppDbContext db, ILogger<EfWorkOrderService> log
     private static bool IsUniqueViolation(DbUpdateException ex, string constraintName) =>
         ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } pg
         && pg.ConstraintName == constraintName;
-
-    // Таблица переходов статусов (docs/data-model.md, §6) — в одном месте, а не в каждом методе контроллера.
-    // Возвращает текст отказа (→ 409) или null, если переход разрешён.
-    private static string? CheckTransition(WorkOrder w, string to, int currentUserId, AppUser? user)
-    {
-        var from = w.Status;
-
-        switch (from, to)
-        {
-            case (WorkOrderStatuses.New, WorkOrderStatuses.InProgress):
-                if (w.AssigneeUserId is null)
-                    return "Нельзя перевести в ремонт: исполнитель не назначен";
-                if (w.AssigneeUserId != currentUserId)
-                    return "Перевести в ремонт может только назначенный слесарь";
-                return null;
-
-            case (WorkOrderStatuses.InProgress, WorkOrderStatuses.Closed):
-                if (w.AssigneeUserId != currentUserId)
-                    return "Завершить ремонт может только назначенный слесарь";
-                return null;
-
-            case (WorkOrderStatuses.New, WorkOrderStatuses.Cancelled):
-                if (user?.Role == UserRoles.Mechanic)
-                    return null;
-                if (user?.Role == UserRoles.Foreman && w.CreatedByUserId == currentUserId)
-                    return null;
-                return "Отменить заявку может механик цеха или мастер — автор заявки";
-
-            default:
-                return $"Недопустимый переход статуса: {from} → {to}";
-        }
-    }
 }
