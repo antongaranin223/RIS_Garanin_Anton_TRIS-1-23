@@ -46,6 +46,14 @@ Content-Type: application/json
 GET {{host}}/api/auth/me
 Authorization: Bearer {{tokenForeman}}
 
+### Оборудование для формы — 200 (все роли)
+GET {{host}}/api/equipment
+Authorization: Bearer {{tokenForeman}}
+
+### Слесари для «Назначить» — 200 (только механик цеха; мастеру — 403)
+GET {{host}}/api/users?role=Fitter
+Authorization: Bearer {{tokenMechanic}}
+
 ### Создать без входа — 401
 POST {{host}}/api/work-orders
 Content-Type: application/json

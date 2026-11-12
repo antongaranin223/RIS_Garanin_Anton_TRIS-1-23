@@ -1,9 +1,10 @@
 <script setup>
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { workOrders } from '../workOrdersStore.js'
 import { validateWorkOrder } from '../workOrderValidation.js'
 import { createWorkOrder, errorMessage } from '../api/workOrders.js'
+import { getEquipment } from '../api/reference.js'
 
 const router = useRouter()
 
@@ -19,6 +20,18 @@ const errors = ref({})
 const formError = ref('')
 // Пока идёт POST, кнопка заблокирована и второй submit ничего не отправит.
 const isSubmitting = ref(false)
+
+// Справочник оборудования для выпадающего списка (GET /api/equipment).
+// Не загрузился (mock, нет связи) — показываем обычное поле для номера equipmentId, как в ЛР5.
+const equipment = ref([])
+const equipmentLoadFailed = ref(false)
+onMounted(async () => {
+  try {
+    equipment.value = await getEquipment()
+  } catch {
+    equipmentLoadFailed.value = true
+  }
+})
 
 // Учебный флаг ?skipClientCheck: не проверять поля в браузере, чтобы увидеть ответ 400 от сервера (mock).
 const skipClientCheck = new URLSearchParams(window.location.search).has('skipClientCheck')
@@ -79,8 +92,22 @@ const vFocus = { mounted: (el) => el.focus() }
       />
       <p id="title-error" class="field-error">{{ errors.title }}</p>
 
-      <label for="equipmentId">Номер оборудования (equipmentId), целое число больше 0</label>
+      <label for="equipmentId">Оборудование</label>
+      <select
+        v-if="!equipmentLoadFailed"
+        id="equipmentId"
+        v-model.number="form.equipmentId"
+        name="equipmentId"
+        :aria-invalid="Boolean(errors.equipmentId)"
+        aria-describedby="equipmentId-error"
+      >
+        <option :value="null" disabled>Выберите оборудование…</option>
+        <option v-for="e in equipment" :key="e.id" :value="e.id">
+          {{ e.inventoryNumber }} · {{ e.name }} ({{ e.areaName }})
+        </option>
+      </select>
       <input
+        v-else
         id="equipmentId"
         v-model.number="form.equipmentId"
         name="equipmentId"

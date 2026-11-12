@@ -1,4 +1,4 @@
-// Клиент API заявок на ремонт. Страницы знают только две функции: getWorkOrders и createWorkOrder.
+// Клиент API заявок на ремонт: список, создание, назначение исполнителя и смена статуса.
 // Адрес, токен и разбор ошибок — в api/http.js.
 import { request } from './http.js'
 
@@ -17,5 +17,23 @@ export function createWorkOrder(body) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
+  })
+}
+
+// PATCH /api/work-orders/{id}/assignee → заявка с исполнителем, статус остаётся New. Только механик цеха.
+export function assignWorkOrder(id, assigneeUserId) {
+  return request(`/api/work-orders/${id}/assignee`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ assigneeUserId }),
+  })
+}
+
+// PATCH /api/work-orders/{id}/status → заявка с новым статусом. Кто может — решает сервер (403 / 409).
+export function changeWorkOrderStatus(id, status) {
+  return request(`/api/work-orders/${id}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
   })
 }

@@ -87,6 +87,7 @@ h1 {
 }
 
 input,
+select,
 textarea {
   padding: 8px 10px;
   font: inherit;

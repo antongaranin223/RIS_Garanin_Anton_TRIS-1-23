@@ -1,6 +1,6 @@
 {
   "info": {
-    "name": "ТОиР-Цех — заявки на ремонт (ЛР8–ЛР11)",
+    "name": "ТОиР-Цех — заявки на ремонт (ЛР8–ЛР12)",
     "description": "Импортировать в Postman или Insomnia. Сервер: cd backend && dotnet run → http://localhost:5000. Запускать по порядку (Run collection): запросы 00 входят под учебными пользователями и сохраняют токены (tokenForeman — мастер ivanov, tokenMechanic — механик kuznetsov, tokenFitter / tokenFitter2 — слесари petrov и sidorov); запрос 02 сохраняет id созданной заявки в workOrderId. Учебный пароль — переменная password (см. README). Без токена — 401, чужая роль или чужая заявка — 403.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
@@ -419,6 +419,127 @@
             "exec": [
               "pm.test('Код 200', () => pm.response.to.have.status(200));",
               "pm.test('Ответ — массив (пустой список тоже 200 и [])', () => pm.expect(pm.response.json()).to.be.an('array'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "01a GET оборудование — 200, 12 единиц",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenForeman}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/equipment",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "equipment"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.test('12 единиц с названием участка', () => {",
+              "  const b = pm.response.json();",
+              "  pm.expect(b).to.have.length(12);",
+              "  pm.expect(b[0]).to.have.property('areaName');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "01b GET слесари механиком — 200",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenMechanic}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/users?role=Fitter",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "users"
+          ],
+          "query": [
+            {
+              "key": "role",
+              "value": "Fitter"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.test('Только слесари, без логина и хэша', () => {",
+              "  const b = pm.response.json();",
+              "  pm.expect(b.length).to.be.above(0);",
+              "  b.forEach(u => { pm.expect(u.role).to.eql('Fitter'); pm.expect(u).to.not.have.property('passwordHash'); });",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "01c GET слесари мастером — 403",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenForeman}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/users?role=Fitter",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "users"
+          ],
+          "query": [
+            {
+              "key": "role",
+              "value": "Fitter"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 403', () => pm.response.to.have.status(403));"
             ]
           }
         }

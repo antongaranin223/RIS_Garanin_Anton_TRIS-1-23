@@ -2,13 +2,12 @@
 // Им пользуются api/auth.js (вход) и api/workOrders.js (заявки).
 import { clearSession, getToken } from './session.js'
 
-// Единственный переключатель источника данных.
-//   false — настоящий ASP.NET Core Web API по адресу из .env (VITE_API_BASE_URL, порт 5000). С ЛР11 вход
-//           проверяет сервер, поэтому по умолчанию работаем с ним;
-//   true  — учебный mock ЛР6 (src/api/mockWorkOrders.js) на dev-сервере Vite. Входа в mock нет.
-export const USE_MOCK = false
+// Единственный переключатель источника данных — VITE_USE_MOCK в frontend/.env (после правки перезапустить npm run dev).
+//   false (рабочий режим, ЛР12) — настоящий ASP.NET Core Web API по адресу VITE_API_BASE_URL (порт 5000);
+//   true  — учебный mock ЛР6 (src/api/mockWorkOrders.js) на dev-сервере Vite. Входа и справочников в mock нет.
+export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
 
-const baseUrl = USE_MOCK ? '' : (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5000')
+export const baseUrl = USE_MOCK ? '' : (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5000')
 
 // Учебные флаги mock задаются в адресе страницы, чтобы воспроизводить отказы без правки кода:
 //   ?force500 — mock отвечает 500 на любой запрос;

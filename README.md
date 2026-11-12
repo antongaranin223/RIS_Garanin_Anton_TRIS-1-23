@@ -9,197 +9,233 @@
 | Тема | Разработка веб-платформы управления техническим обслуживанием оборудования для промышленного предприятия |
 | Организация | Механосборочный цех № 2, служба главного механика, машиностроительный завод «Уралмаш» (ПАО «Уралмашзавод», г. Екатеринбург) |
 | Главный объект | Заявка на ремонт / ТО оборудования (`/api/work-orders`) |
-| Справочник | Оборудование (`equipmentId`) |
-| Стек | Vue 3 · ASP.NET Core Web API · PostgreSQL |
+| Справочник | Оборудование (`/api/equipment`, поле `equipmentId`) |
 | Статус темы | ждём утверждения |
 
-## Запуск клиента (Vue)
+Мастер участка создаёт заявку на сломанный станок, механик цеха назначает слесаря, слесарь переводит заявку в ремонт и закрывает её. Начальник цеха видит все заявки.
 
-Нужен Node.js LTS (22.18+ или 24): проверить командами `node -v` и `npm -v`.
+## Стенд
 
-```bash
+```text
+ Браузер ──► Vue 3 (Vite)          http://localhost:5173
+               │  fetch + Authorization: Bearer <JWT>
+               ▼
+             ASP.NET Core Web API   http://localhost:5000   (Swagger: /swagger)
+               │  EF Core + Npgsql
+               ▼
+             PostgreSQL             localhost:5432, база toir_workshop
+```
+
+| Что | Версия | Проверить |
+|-----|--------|-----------|
+| .NET SDK | 10 (LTS) | `dotnet --version` → `10.0.…` |
+| Инструмент миграций `dotnet-ef` | 10.0.x | `dotnet ef --version` |
+| Node.js | 22.18+ или 24 (LTS) | `node -v` |
+| PostgreSQL | 16 или новее (с ним pgAdmin) | `psql --version` |
+
+Проверено на .NET SDK 10.0.114, `dotnet-ef` 10.0.14, Node 22.23, PostgreSQL 16.15.
+
+Порты фиксированы: клиент **5173**, API **5000**, PostgreSQL **5432**. Если порт 5173 занят, Vite выберет другой, но API пустит запросы только с `http://localhost:5173` (CORS). Освободите порт, а не меняйте его.
+
+## Развёртывание с нуля
+
+Команды — для PowerShell на Windows. В Linux/macOS вместо `copy` пишите `cp`.
+
+### 0. Установить инструменты
+
+1. .NET SDK 10 — https://dotnet.microsoft.com/download (именно SDK, не Runtime).
+2. Node.js LTS — https://nodejs.org.
+3. PostgreSQL 16+ — https://www.postgresql.org/download/windows/. Пароль пользователя `postgres` задаётся при установке: запомните его, в репозиторий он не попадает.
+4. Инструмент миграций, один раз на компьютер:
+
+   ```powershell
+   dotnet tool install --global dotnet-ef
+   ```
+
+   Если команда пишет, что он уже установлен: `dotnet tool update --global dotnet-ef`. **Закройте и снова откройте терминал**, затем проверьте `dotnet ef --version`.
+
+5. Если PowerShell пишет «выполнение сценариев отключено» на `npm`, разрешите скрипты для своего пользователя (один раз, права администратора не нужны):
+
+   ```powershell
+   Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+   ```
+
+   Или вместо `npm` пишите `npm.cmd`.
+
+### 1. Получить код
+
+```powershell
+git clone https://github.com/antongaranin223/RIS_Garanin_Anton_TRIS-1-23.git
+cd RIS_Garanin_Anton_TRIS-1-23
+```
+
+### 2. Создать пустую базу
+
+```powershell
+& "C:\Program Files\PostgreSQL\16\bin\createdb.exe" -U postgres toir_workshop
+```
+
+Номер версии в пути — ваш (`16`, `17`…). Если папка `bin` есть в PATH, достаточно `createdb -U postgres toir_workshop`. Пароль `postgres` команда спросит сама. Можно и через pgAdmin: *Databases* → *Create* → *Database…* → имя `toir_workshop`.
+
+Таблицы руками **не** создаём: их создадут миграции на шаге 4. Если база с таким именем уже есть (например, из ЛР9 с таблицами от `schema.sql`), удалите её: `dropdb -U postgres toir_workshop` — и создайте снова.
+
+### 3. Задать секреты сервера (вне репозитория)
+
+```powershell
+cd backend
+dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Port=5432;Database=toir_workshop;Username=postgres;Password=ВАШ_ПАРОЛЬ_POSTGRES"
+dotnet user-secrets set "Jwt:Key" "ЛЮБАЯ_СЛУЧАЙНАЯ_СТРОКА_НЕ_КОРОЧЕ_32_СИМВОЛОВ"
+```
+
+- `ВАШ_ПАРОЛЬ_POSTGRES` — пароль, заданный при установке PostgreSQL.
+- `Jwt:Key` — придумайте сами: им сервер подписывает токены входа.
+- user-secrets хранятся в профиле пользователя Windows (`%APPDATA%\Microsoft\UserSecrets\`), а не в папке проекта, поэтому в Git не попадают.
+- Вместо user-secrets можно задать переменные окружения `ConnectionStrings__Default` и `Jwt__Key`.
+
+### 4. Применить миграции
+
+Там же, в папке `backend`:
+
+```powershell
+dotnet restore
+dotnet ef database update
+```
+
+`dotnet restore` скачивает пакеты NuGet (EF Core, Npgsql, JwtBearer). Без него на свежей копии `dotnet ef` падает с `NETSDK1004: Assets file … project.assets.json not found`.
+
+Ожидается в конце:
+
+```text
+Applying migration '20261107071750_InitialCreate'.
+Applying migration '20261107073927_AddPasswordHashes'.
+Done.
+```
+
+Красная строка `fail: … __EFMigrationsHistory` при **первом** запуске — норма: EF проверяет, есть ли таблица истории, не находит и создаёт её. В базе появятся таблицы `areas`, `equipment`, `users`, `work_orders`, а также 3 участка, 12 единиц оборудования и 6 учебных пользователей. Заявок нет — их создают через приложение.
+
+### 5. Запустить API (терминал 1)
+
+```powershell
+dotnet run
+```
+
+Ждать строку `Now listening on: http://localhost:5000`. Проверка: http://localhost:5000/swagger открывается, http://localhost:5000/health отвечает `ok`. Окно не закрывать. Остановить — `Ctrl+C`.
+
+Если API сразу падает с сообщением «Не задана строка подключения» или «Не задан ключ подписи JWT», вернитесь к шагу 3: команды выполняются в папке `backend`.
+
+### 6. Запустить клиент (терминал 2)
+
+```powershell
 cd frontend
-copy .env.example .env      # Windows; в Linux/macOS: cp .env.example .env
+copy .env.example .env
 npm install
 npm run dev
 ```
 
-Открыть адрес Vite, обычно `http://localhost:5173` (если порт занят, Vite напишет другой адрес в терминале). Остановить — `Ctrl+C`.
+Открыть http://localhost:5173 — появится экран входа.
 
-В клиенте три страницы со своими адресами; меню в шапке видно на всех:
+В `frontend/.env` (из `.env.example`) — `VITE_API_BASE_URL=http://localhost:5000` и `VITE_USE_MOCK=false`, секретов там нет. После правки `.env` перезапустите `npm run dev`.
 
-| Адрес | Страница |
-|-------|----------|
-| `http://localhost:5173/login` | вход (логин, пароль) — открывается первым, пока не вошли |
-| `http://localhost:5173/` | список заявок на ремонт (загрузка, пусто, данные или ошибка) — после входа |
-| `http://localhost:5173/new` | создание заявки (`title`, `equipmentId`, `description`) — только мастеру и механику |
+### Учебные логины
 
-С ЛР11 клиент работает с **настоящим API** на `http://localhost:5000` (адрес — `VITE_API_BASE_URL` в `.env`), поэтому сервер должен быть запущен. Вход — `POST /api/auth/login`, полученный токен клиент кладёт в `sessionStorage` и шлёт в каждом запросе заголовком `Authorization: Bearer …`. В шапке — ФИО и роль, кнопка «Выйти». Учебный mock ЛР6 остался (`USE_MOCK = true` в `frontend/src/api/http.js`), но входа в нём нет. Подробнее — [`frontend/README.md`](frontend/README.md).
+Пароль у всех — **`Toir-2026!`**. Он учебный, нигде вне стенда не используется. В базе хранится хэш, а не этот текст.
 
-## Запуск сервера (ASP.NET Core Web API)
+| Логин | Кто | Что может на экране |
+|-------|-----|---------------------|
+| `ivanov` | Иванов А. П., мастер участка | создать заявку, отменить свою новую |
+| `smirnov` | Смирнов О. Л., мастер участка | то же (второй мастер — для проверки «чужой» заявки) |
+| `kuznetsov` | Кузнецов Д. В., механик цеха | создать, **назначить** слесаря, отменить новую |
+| `petrov` | Петров С. И., слесарь-ремонтник | «В ремонт» и «Выполнена» у **своих** заявок, фильтр «Мои заявки» |
+| `sidorov` | Сидоров В. А., слесарь-ремонтник | то же (второй слесарь — для проверки 403) |
+| `orlov` | Орлов Е. Н., начальник цеха | только смотреть, фильтр по статусу |
 
-Нужен .NET SDK 10 (LTS): проверить командой `dotnet --version`. Если команды нет — установить SDK с https://dotnet.microsoft.com/download (не только Runtime).
+Полная матрица «роль × действие» с кодами ответов — [`docs/role-matrix.md`](docs/role-matrix.md).
 
-Сервер хранит заявки в PostgreSQL (ЛР10), поэтому перед первым запуском нужны база, строка подключения и миграция — подробно в разделе «База данных» ниже. Коротко:
+## Проверочный сценарий (3 минуты)
 
-```bash
-cd backend
-dotnet restore
-dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Port=5432;Database=toir_workshop;Username=postgres;Password=ВАШ_ПАРОЛЬ"
-dotnet user-secrets set "Jwt:Key" "ЛЮБАЯ_СЛУЧАЙНАЯ_СТРОКА_НЕ_КОРОЧЕ_32_СИМВОЛОВ"
-dotnet ef database update
-dotnet run
-```
+1. Войти как `ivanov` → «Создать» → заголовок, оборудование из списка, описание → «Создать». В списке появится строка `ЗР-2026-0001`, `id 1`, статус «Новая». **Запишите id.**
+2. «Выйти» → войти как `kuznetsov` → в строке заявки выбрать «Петров С. И.» → «Назначить». Исполнитель — Петров, статус по-прежнему «Новая».
+3. «Выйти» → войти как `sidorov`: у заявки Петрова кнопок нет.
+4. «Выйти» → войти как `petrov` → «В ремонт». Статус «В ремонте».
+5. F12 → Network: `POST /api/work-orders` → 201, в Response тот же `id`; `PATCH …/1/assignee` → 200; `PATCH …/1/status` → 200.
+6. pgAdmin или `psql -U postgres -d toir_workshop`:
 
-В терминале должно появиться `Now listening on: http://localhost:5000` и `Hosting environment: Development`. Остановить — `Ctrl+C`.
-
-| Адрес | Что там |
-|-------|---------|
-| `http://localhost:5000` | API |
-| `http://localhost:5000/swagger` | Swagger — список адресов API с кнопкой «Try it out» (только в Development) |
-| `http://localhost:5000/health` | `ok` — **только** «процесс жив и отвечает», не проверяет создание заявок |
-| `http://localhost:5000/info` | имя приложения, среда, версия |
-
-### Вход и права (ЛР11)
-
-**Способ входа — учебный JWT в заголовке `Authorization: Bearer <токен>`** (cookie не используем). Токен выдаёт `POST /api/auth/login`, он действует 8 часов (смена); `GET /api/auth/me` — кто вошёл.
-
-| Логин | Роль | Что может |
-|-------|------|-----------|
-| `ivanov`, `smirnov` | мастер участка | создавать, отменять **свою** заявку в `New` |
-| `kuznetsov` | механик цеха | создавать, назначать слесаря, отменять заявку в `New` |
-| `petrov`, `sidorov` | слесарь-ремонтник | переводить **свою** заявку в `InProgress` и `Closed` |
-| `orlov` | начальник цеха | только смотреть |
-
-Учебный пароль у всех — **`Toir-2026!`** (только для стенда, нигде больше не используется). В базе лежит хэш `PasswordHasher` из ASP.NET Identity, а не этот текст. Полная таблица «роль × действие» — [`docs/role-matrix.md`](docs/role-matrix.md).
-
-Без токена любой адрес `/api/work-orders` отвечает **401**, роли без права или на чужую заявку — **403**. Права проверяет сервер, а не клиент.
-
-**Ключ подписи JWT — секрет**, его нет в Git: `dotnet user-secrets set "Jwt:Key" "…"` (или переменная окружения `Jwt__Key`). Без ключа API не запустится и напишет, какую команду выполнить. Сменили ключ — все выданные токены перестают действовать, нужно войти заново.
-
-**Swagger:** выполнить `POST /api/auth/login` → скопировать `token` → кнопка **Authorize** вверху → вставить токен (без слова `Bearer`) → дальше запросы идут от этого пользователя.
-
-**CORS:** API разрешает запросы только с адреса клиента `http://localhost:5173` (`Cors:Origins` в `appsettings.json`), не со всех сайтов.
-
-### REST заявок на ремонт (ЛР8)
-
-Путь и поля — из контракта ЛР2 ([`docs/api-contract.md`](docs/api-contract.md)): ресурс `/api/work-orders`, поля создания `title`, `equipmentId`, `description`, статусы `New`, `InProgress`, `Closed`, `Cancelled`.
-
-| Метод и путь | Успех | Отказы |
-|--------------|-------|--------|
-| `GET /api/work-orders` | `200`, массив (пустой — `[]`) | — |
-| `GET /api/work-orders/{id}` | `200` | `404` |
-| `POST /api/work-orders` | `201`, `id`, `number` `ЗР-ГГГГ-NNNN`, `status: "New"` | `400` поля, `401` без входа, `403` не мастер/механик, `409` номер занят параллельным запросом |
-| `PATCH /api/work-orders/{id}/assignee` | `200`, статус остаётся `New` | `400` не слесарь, `401`, `403` не механик, `404`, `409` заявка не в `New` |
-| `PATCH /api/work-orders/{id}/status` | `200` | `400` неизвестный код, `401`, `403` чужая заявка или не та роль, `404`, `409` запрещённый переход |
-
-`DELETE` нет: отмена — статус `Cancelled`. Ошибки приходят в формате `ProblemDetails`, у `400` — `errors` по полям. `GET` тоже требуют входа (`401` без токена).
-
-**Кто выполняет действие** — только пользователь из токена (утверждение `sub`). Заголовка `X-User-Id` из ЛР8 больше нет. Оборудование — `equipmentId` от 1 до 12.
-
-**Коллекция запросов:** [`docs/api-collection/work-orders.postman_collection.json`](docs/api-collection/work-orders.postman_collection.json). В Postman: *Import* → выбрать файл → *Run collection* по порядку. Запросы `00` входят под учебными пользователями и сохраняют токены в переменные, запрос `02` запоминает `id` созданной заявки. Внутри проверки 200, 201, 400, 401, 403, 404, 409 и учебного 500. Быстрые запросы для VS Code (REST Client) — `backend/backend.http`: сначала выполнить четыре запроса входа.
-
-**Учебный сбой** (только Development): заголовок `X-Simulate-Failure: 1` на `POST /api/work-orders` → клиенту `500` без stack trace, в консоли `dotnet run` строка `CreateWorkOrder failed; equipmentId=…; error=InvalidOperationException`.
-
-Ограничения:
-
-- заявки хранятся в PostgreSQL через EF Core и **переживают перезапуск сервера** (ЛР10);
-- **`/health` проверяет только живость процесса**: он не принимает полей заявки, и его `200` не доказывает, что заявки создаются;
-- регистрации, смены и восстановления пароля нет: учётки создаёт миграция (seed);
-- выход — клиент просто забывает токен; сам токен действует до конца срока (8 часов), отозвать его на сервере нельзя;
-- в клиенте пока только вход, список и создание; назначение и смена статуса на экране — ЛР12 (через API уже работают).
-
-## База данных (PostgreSQL, ЛР9–ЛР10)
-
-SQL-скрипты лежат в [`db/`](db):
-
-| Файл | Что внутри |
-|------|------------|
-| [`db/schema.sql`](db/schema.sql) | таблицы `areas`, `equipment`, `users`, `work_orders`; PK, FK, CHECK (четыре статуса), индексы. Можно запускать повторно: в начале удаляет и заново создаёт только таблицы проекта |
-| [`db/seed.sql`](db/seed.sql) | учебные данные: 3 участка, 12 единиц оборудования, 6 пользователей, 8 заявок во всех четырёх статусах |
-| [`db/queries.sql`](db/queries.sql) | фильтр + сортировка, JOIN с названиями оборудования и участка, GROUP BY по статусам, проверки CHECK и FK |
-
-Нужен PostgreSQL 16 или новее (установщик для Windows: https://www.postgresql.org/download/windows/, вместе с ним ставится pgAdmin). Учебная база — `toir_workshop`, не служебная `postgres`.
-
-**Через `psql`** (из корня репозитория; на Windows `psql` лежит в `C:\Program Files\PostgreSQL\<версия>\bin` — добавьте папку в PATH или пишите полный путь):
-
-```bash
-createdb -U postgres toir_workshop
-psql -U postgres -d toir_workshop -f db/schema.sql
-psql -U postgres -d toir_workshop -f db/seed.sql
-psql -U postgres -d toir_workshop -f db/queries.sql
-```
-
-**Через pgAdmin:** создать базу `toir_workshop` → *Query Tool* → открыть и выполнить `schema.sql`, затем `seed.sql`; запросы из `queries.sql` выполнять по одному (выделить запрос → F5).
-
-Пересоздать всё с нуля: снова выполнить `schema.sql` и `seed.sql` (или `dropdb -U postgres toir_workshop` и команды выше).
-
-Пароль — тот, что задали при установке PostgreSQL; `psql` спросит его сам. **Пароль в файлы и в Git не кладём.**
-
-### Сервер и EF Core (ЛР10)
-
-API работает с базой через EF Core (`backend/Data/AppDbContext.cs`). Схему для API создают **миграции** из `backend/Migrations`, а не `schema.sql` — тот остаётся справкой ЛР9. Справочники (участки, оборудование, пользователи с хэшами паролей) вставляют сами миграции; заявки создаются через API.
-
-1. Инструмент миграций (один раз на компьютер):
-
-   ```bash
-   dotnet tool install --global dotnet-ef   # уже стоит: dotnet tool update --global dotnet-ef
-   dotnet ef --version
+   ```sql
+   SELECT id, number, title, status, assignee_user_id FROM work_orders WHERE id = 1;
    ```
 
-2. Пустая база. Если в `toir_workshop` уже есть таблицы из `schema.sql`, пересоздайте её, иначе миграция упадёт на `relation "areas" already exists`:
+   Ожидается: `InProgress`, `assignee_user_id = 5`.
+7. В терминале API — `Ctrl+C`, снова `dotnet run`. Обновить страницу: заявка на месте, «В ремонте».
 
-   ```bash
-   dropdb -U postgres --if-exists toir_workshop
-   createdb -U postgres toir_workshop
-   ```
+Обход экрана: в Swagger выполнить `POST /api/auth/login` за `sidorov`, нажать **Authorize**, вставить токен и выполнить `PATCH /api/work-orders/1/status` с `{"status":"Closed"}` → **403** «Нет прав на изменение этой заявки». Права проверяет сервер, а не спрятанная кнопка.
 
-3. Строка подключения — в **user-secrets**, вне репозитория (в `appsettings.json` только пустой ключ):
+Таблица «шаг — что ждём — где смотреть» по трём критериям ЛР1 — [`docs/acceptance-check.md`](docs/acceptance-check.md).
 
-   ```bash
-   cd backend
-   dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Port=5432;Database=toir_workshop;Username=postgres;Password=ВАШ_ПАРОЛЬ"
-   ```
+## API
 
-   Там же — ключ подписи JWT (ЛР11), тоже не в Git:
+Контракт — [`docs/api-contract.md`](docs/api-contract.md). Все адреса, кроме входа, требуют заголовок `Authorization: Bearer <токен>`. Ошибки приходят в формате `ProblemDetails`, у `400` — `errors` по полям.
 
-   ```bash
-   dotnet user-secrets set "Jwt:Key" "ЛЮБАЯ_СЛУЧАЙНАЯ_СТРОКА_НЕ_КОРОЧЕ_32_СИМВОЛОВ"
-   ```
+| Метод и путь | Кто | Успех | Отказы |
+|--------------|-----|-------|--------|
+| `POST /api/auth/login` | все | `200`, `token`, `user` | `400`, `401` неверный логин или пароль |
+| `GET /api/auth/me` | вошедшие | `200` | `401` |
+| `GET /api/equipment` | вошедшие | `200`, оборудование с участком | `401` |
+| `GET /api/users?role=Fitter` | механик | `200`, слесари | `401`, `403` |
+| `GET /api/work-orders` | вошедшие | `200`, массив (пустой — `[]`) | `401` |
+| `GET /api/work-orders/{id}` | вошедшие | `200` | `401`, `404` |
+| `POST /api/work-orders` | мастер, механик | `201`, `number` `ЗР-ГГГГ-NNNN`, `status: "New"` | `400`, `401`, `403`, `409` номер занят параллельным запросом |
+| `PATCH /api/work-orders/{id}/assignee` | механик | `200`, статус остаётся `New` | `400` не слесарь, `401`, `403`, `404`, `409` не `New` |
+| `PATCH /api/work-orders/{id}/status` | по матрице ролей | `200` | `400` неизвестный код, `401`, `403` чужая заявка или роль, `404`, `409` запрещённый переход |
 
-   Вместо user-secrets можно задать переменные окружения `ConnectionStrings__Default` и `Jwt__Key`.
+`DELETE` нет: отмена — статус `Cancelled`. `401` — сервер не знает, кто вы; `403` — знает, но вам нельзя; `409` — можно, но не в этом состоянии заявки.
 
-4. Применить миграции и запустить:
+- **Swagger**: http://localhost:5000/swagger → `POST /api/auth/login` → скопировать `token` → **Authorize** → вставить токен без слова `Bearer`.
+- **Postman**: *Import* → [`docs/api-collection/work-orders.postman_collection.json`](docs/api-collection/work-orders.postman_collection.json) → *Run collection* по порядку. Запросы `00` сами входят и сохраняют токены. Внутри 27 запросов с проверками 200/201/400/401/403/404/409/500.
+- **VS Code (REST Client)**: [`backend/backend.http`](backend/backend.http) — сначала четыре запроса входа.
+- **Учебный сбой** (только Development): заголовок `X-Simulate-Failure: 1` на `POST /api/work-orders` → `500` без stack trace, в консоли API — одна строка `CreateWorkOrder failed; …`.
 
-   ```bash
-   dotnet ef database update
-   dotnet run
-   ```
+## Как устроено
 
-Миграции: `InitialCreate` (ЛР10, таблицы и справочники), `AddPasswordHashes` (ЛР11, хэши паролей, `password_hash NOT NULL`). Если база уже создана в ЛР10, `dotnet ef database update` применит только вторую — заявки останутся.
+**Сервер** (`backend/`), ASP.NET Core Web API:
 
-Сменили модель — новая миграция: `dotnet ef migrations add ИмяИзменения`, затем `dotnet ef database update`. Применённые миграции вручную не редактируем. В консоли `dotnet run` (Development) видно SQL, который строит EF.
+- `Controllers/` — `WorkOrdersController` (заявки), `AuthController` (вход), `ReferenceController` (оборудование, слесари).
+- `Services/EfWorkOrderService.cs` — правила процесса и права: переходы статусов, «своя / чужая заявка».
+- `Data/AppDbContext.cs` — EF Core, таблицы и ограничения как в `db/schema.sql`.
+- `Migrations/` — схема и начальные данные.
+- `Auth/` — выпуск и проверка JWT.
+- Пароли проверяет `PasswordHasher` из ASP.NET Identity.
+- CORS разрешает только `http://localhost:5173` (`Cors:Origins` в `appsettings.json`).
+- В Development в консоли видно SQL, который строит EF.
+
+**Клиент** (`frontend/`), Vue 3 + Vite + vue-router. Подробнее — [`frontend/README.md`](frontend/README.md).
+
+- `src/api/http.js` — адрес API и заголовок `Authorization`.
+- `src/api/session.js` — токен в `sessionStorage`.
+- Страницы: `/login`, `/` (список с действиями по ролям), `/new` (создание).
+- Пользовательский текст выводится только через `{{ }}`, без `v-html`.
+- Учебный mock ЛР6 включается `VITE_USE_MOCK=true`, но входа в нём нет — см. известные дефекты.
+
+**База** (`db/`) — SQL-скрипты ЛР9: [`schema.sql`](db/schema.sql), [`seed.sql`](db/seed.sql), [`queries.sql`](db/queries.sql). Это **справка** по схеме и примеры запросов. Базу для приложения создают миграции (шаг 4), а не эти скрипты. `seed.sql` на базе после миграций выполнять не нужно: справочники там уже есть.
+
+**Новая миграция** при изменении модели: `dotnet ef migrations add ИмяИзменения` → `dotnet ef database update`. Применённые миграции вручную не редактируем.
+
+## Ограничения и известные дефекты
+
+Список с приоритетами — [`docs/known-defects.md`](docs/known-defects.md). Главное:
+
+- Регистрации и смены пароля нет. Учётки создаёт миграция.
+- «Выйти» только забывает токен в браузере. Сам токен действует до конца срока (8 часов).
+- Фильтры списка работают в браузере, постраничной загрузки нет.
+- Изменения, сделанные другими пользователями, видны после «Обновить».
 
 ## Документы
 
-- [Заявка на тему](docs/project-proposal.md)
-- [Требования ЛР1](docs/lab-01-requirements.md)
-- [Архитектура (схема из трёх узлов)](docs/architecture.md) — ЛР2
-- [Модель данных (ER, 3НФ, статусы)](docs/data-model.md) — ЛР2
-- [Контракт API](docs/api-contract.md) — ЛР2
-- [Матрица требований](docs/requirements-matrix.md) — ЛР2
-- [Отчёт ЛР2](docs/reports/lab-02.md)
-- [Отчёт ЛР3](docs/reports/lab-03.md)
-- [Отчёт ЛР4](docs/reports/lab-04.md)
-- [Отчёт ЛР5](docs/reports/lab-05.md)
-- [Отчёт ЛР6](docs/reports/lab-06.md)
-- [Отчёт ЛР7](docs/reports/lab-07.md)
-- [Коллекция запросов API (ЛР8)](docs/api-collection/work-orders.postman_collection.json)
-- [Отчёт ЛР8](docs/reports/lab-08.md)
-- [Отчёт ЛР9](docs/reports/lab-09.md)
-- [Отчёт ЛР10](docs/reports/lab-10.md)
-- [Матрица ролей (ЛР11)](docs/role-matrix.md)
-- [Отчёт ЛР11](docs/reports/lab-11.md)
+- [Заявка на тему](docs/project-proposal.md) · [Требования ЛР1](docs/lab-01-requirements.md)
+- ЛР2: [Архитектура](docs/architecture.md) · [Модель данных](docs/data-model.md) · [Контракт API](docs/api-contract.md) · [Матрица требований](docs/requirements-matrix.md)
+- [Матрица ролей](docs/role-matrix.md) (ЛР11)
+- [Проверка трёх критериев](docs/acceptance-check.md) · [Известные дефекты](docs/known-defects.md) (ЛР12)
+- [Коллекция запросов API](docs/api-collection/work-orders.postman_collection.json)
+- Отчёты: [ЛР2](docs/reports/lab-02.md) · [ЛР3](docs/reports/lab-03.md) · [ЛР4](docs/reports/lab-04.md) · [ЛР5](docs/reports/lab-05.md) · [ЛР6](docs/reports/lab-06.md) · [ЛР7](docs/reports/lab-07.md) · [ЛР8](docs/reports/lab-08.md) · [ЛР9](docs/reports/lab-09.md) · [ЛР10](docs/reports/lab-10.md) · [ЛР11](docs/reports/lab-11.md) · [ЛР12](docs/reports/lab-12.md)
 
 ## Лабораторные работы
 
@@ -216,3 +252,4 @@ API работает с базой через EF Core (`backend/Data/AppDbContex
 | 9 | PostgreSQL и SQL | сдано на проверку |
 | 10 | EF Core и PostgreSQL | сдано на проверку |
 | 11 | Вход и права | сдано на проверку |
+| 12 | Сквозная сборка | сдано на проверку |
