@@ -29,11 +29,11 @@
 | Что | Версия | Проверить |
 |-----|--------|-----------|
 | .NET SDK | 10 (LTS) | `dotnet --version` → `10.0.…` |
-| Инструмент миграций `dotnet-ef` | 10.0.x | `dotnet ef --version` |
+| Инструмент миграций `dotnet-ef` | 10.0.x (не 11) | `dotnet ef --version` |
 | Node.js | 22.18+ или 24 (LTS) | `node -v` |
 | PostgreSQL | 16 или новее (с ним pgAdmin) | `psql --version` |
 
-Проверено на .NET SDK 10.0.114, `dotnet-ef` 10.0.14, Node 22.23, PostgreSQL 16.15.
+Проверено на .NET SDK 10.0.114, `dotnet-ef` 10.0.15, Node 22.23, PostgreSQL 16.15 (предзащита 12.11.2026).
 
 Порты фиксированы: клиент **5173**, API **5000**, PostgreSQL **5432**. Если порт 5173 занят, Vite выберет другой, но API пустит запросы только с `http://localhost:5173` (CORS). Освободите порт, а не меняйте его.
 
@@ -46,13 +46,13 @@
 1. .NET SDK 10 — https://dotnet.microsoft.com/download (именно SDK, не Runtime).
 2. Node.js LTS — https://nodejs.org.
 3. PostgreSQL 16+ — https://www.postgresql.org/download/windows/. Пароль пользователя `postgres` задаётся при установке: запомните его, в репозиторий он не попадает.
-4. Инструмент миграций, один раз на компьютер:
+4. Инструмент миграций, один раз на компьютер. Версия закреплена под EF Core 10 проекта: без `--version` ставится самый новый `dotnet-ef` (с ноября 2026 — 11.x):
 
    ```powershell
-   dotnet tool install --global dotnet-ef
+   dotnet tool install --global dotnet-ef --version "10.0.*"
    ```
 
-   Если команда пишет, что он уже установлен: `dotnet tool update --global dotnet-ef`. **Закройте и снова откройте терминал**, затем проверьте `dotnet ef --version`.
+   **Закройте и снова откройте терминал**, затем проверьте `dotnet ef --version` → `10.0.…`. Если уже стоит другая версия, удалите её командой `dotnet tool uninstall --global dotnet-ef` и повторите установку.
 
 5. Если PowerShell пишет «выполнение сценариев отключено» на `npm`, разрешите скрипты для своего пользователя (один раз, права администратора не нужны):
 
@@ -234,8 +234,9 @@ npm run dev
 - ЛР2: [Архитектура](docs/architecture.md) · [Модель данных](docs/data-model.md) · [Контракт API](docs/api-contract.md) · [Матрица требований](docs/requirements-matrix.md)
 - [Матрица ролей](docs/role-matrix.md) (ЛР11)
 - [Проверка трёх критериев](docs/acceptance-check.md) · [Известные дефекты](docs/known-defects.md) (ЛР12)
+- [Предзащита: дефекты, повтор критериев, план демо](docs/predefense-check.md) · [Пояснительная записка](docs/kursovaya-zapiska.md) (ЛР13)
 - [Коллекция запросов API](docs/api-collection/work-orders.postman_collection.json)
-- Отчёты: [ЛР2](docs/reports/lab-02.md) · [ЛР3](docs/reports/lab-03.md) · [ЛР4](docs/reports/lab-04.md) · [ЛР5](docs/reports/lab-05.md) · [ЛР6](docs/reports/lab-06.md) · [ЛР7](docs/reports/lab-07.md) · [ЛР8](docs/reports/lab-08.md) · [ЛР9](docs/reports/lab-09.md) · [ЛР10](docs/reports/lab-10.md) · [ЛР11](docs/reports/lab-11.md) · [ЛР12](docs/reports/lab-12.md)
+- Отчёты: [ЛР2](docs/reports/lab-02.md) · [ЛР3](docs/reports/lab-03.md) · [ЛР4](docs/reports/lab-04.md) · [ЛР5](docs/reports/lab-05.md) · [ЛР6](docs/reports/lab-06.md) · [ЛР7](docs/reports/lab-07.md) · [ЛР8](docs/reports/lab-08.md) · [ЛР9](docs/reports/lab-09.md) · [ЛР10](docs/reports/lab-10.md) · [ЛР11](docs/reports/lab-11.md) · [ЛР12](docs/reports/lab-12.md) · [ЛР13](docs/reports/lab-13.md)
 
 ## Лабораторные работы
 
@@ -253,3 +254,4 @@ npm run dev
 | 10 | EF Core и PostgreSQL | сдано на проверку |
 | 11 | Вход и права | сдано на проверку |
 | 12 | Сквозная сборка | сдано на проверку |
+| 13 | Предзащита | сдано на проверку |
